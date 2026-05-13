@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>CP Tracker</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:rgba(0,0,0,.1)}
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f2f2f7;color:#1c1c1e;min-height:100vh}
+button{font-family:inherit;cursor:pointer;-webkit-appearance:none}
+.nav{background:#fff;border-bottom:1px solid #e5e5ea;display:flex;overflow-x:auto;position:sticky;top:0;z-index:50}
+.nav::-webkit-scrollbar{display:none}
+.nav button{flex-shrink:0;padding:12px 15px;border:none;background:none;color:#8e8e93;font-size:14px;font-weight:500;border-bottom:2px solid transparent;white-space:nowrap}
+.nav button.on{color:#007aff;border-bottom-color:#007aff}
+.sync-bar{display:flex;align-items:center;justify-content:space-between;padding:5px 14px;background:#fff;border-bottom:1px solid #e5e5ea;font-size:12px;color:#8e8e93;min-height:30px}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle}
+.dot-green{background:#34c759}.dot-amber{background:#ff9500}.dot-red{background:#ff3b30}
+.hdr{background:#fff;border-bottom:1px solid #e5e5ea;padding:11px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:80px;z-index:40}
+.hdr-t{font-size:16px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.back-btn{background:none;border:none;color:#007aff;font-size:15px;padding:4px 0;flex-shrink:0}
+.add-btn{background:none;border:none;color:#ff3b30;font-size:14px;font-weight:500;flex-shrink:0;padding:4px 0}
+.page{padding:12px 14px 60px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.stat{background:#fff;border-radius:12px;padding:12px;text-align:center}
+.stat-n{font-size:24px;font-weight:700;letter-spacing:-1px}
+.stat-l{font-size:11px;color:#8e8e93;margin-top:2px}
+.row-btn{width:100%;background:#fff;border:none;border-radius:12px;padding:13px 16px;margin-bottom:8px;text-align:left;display:block}
+.row-btn:active{background:#e5e5ea}
+.row-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+.row-title{font-size:15px;font-weight:600}
+.row-meta{font-size:12px;color:#8e8e93}
+.row-snag{color:#ff3b30;font-weight:500;font-size:12px;margin-right:4px}
+.pb{height:5px;background:#e5e5ea;border-radius:3px;overflow:hidden}
+.pf{height:100%;border-radius:3px}
+.pf.g{background:#34c759}.pf.b{background:#007aff}
+.pn{display:flex;justify-content:space-between;font-size:11px;color:#8e8e93;margin-bottom:3px}
+.item-card{background:#fff;border-radius:12px;padding:12px 14px;margin-bottom:8px}
+.item-name{font-size:14px;font-weight:500;margin-bottom:10px;line-height:1.4}
+.sbtns{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.sbtns button{padding:7px 11px;border-radius:8px;border:1px solid #d1d1d6;background:#f9f9f9;color:#8e8e93;font-size:12px;font-weight:500}
+.sbtns button.del{background:#fff3e0;border-color:#ff9500;color:#c07000}
+.sbtns button.ins{background:#e8f4fd;border-color:#007aff;color:#0058c7}
+.sbtns button.sn{background:#ffeaea;border-color:#ff3b30;color:#c80000}
+.sbtns button.fin{background:#eafaea;border-color:#34c759;color:#1a7030}
+.snag-link{background:none;border:none;color:#ff3b30;font-size:12px;padding:0;text-decoration:underline}
+.snag-card{background:#fff;border-radius:12px;padding:12px 14px;margin-bottom:8px;border-left:4px solid #e5e5ea}
+.snag-card.op{border-left-color:#ff3b30}.snag-card.ip{border-left-color:#ff9500}
+.snag-card.af{border-left-color:#8b5cf6}.snag-card.fx{border-left-color:#34c759}
+.stags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px}
+.stag{font-size:11px;padding:2px 7px;border-radius:5px;background:#f2f2f7;color:#636366;font-weight:500}
+.stag-l{background:#e8f4fd;color:#0058c7}
+.snote{font-size:14px;line-height:1.5;margin-bottom:8px}
+.sfoot{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sdate{font-size:11px;color:#8e8e93}
+.ssel{font-size:12px;padding:4px 22px 4px 8px;border-radius:7px;border:1px solid #d1d1d6;background:#f2f2f7;color:#1c1c1e;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238e8e93'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center}
+.del-btn{background:none;border:none;font-size:16px;color:#8e8e93;padding:2px 6px}
+.chips{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:10px 14px;background:#fff;border-bottom:1px solid #e5e5ea}
+.chips::-webkit-scrollbar{display:none}
+.chips button{flex-shrink:0;padding:5px 13px;border-radius:16px;border:1px solid #d1d1d6;background:#f9f9f9;color:#8e8e93;font-size:13px;font-weight:500}
+.chips button.on{background:#007aff;border-color:#007aff;color:#fff}
+.form-block{background:#fff;border-radius:12px;padding:14px;margin-bottom:10px}
+.form-block h3{font-size:12px;font-weight:600;color:#8e8e93;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+.ff{margin-bottom:12px}
+.ff label{display:block;font-size:14px;color:#3a3a3c;font-weight:500;margin-bottom:5px}
+.ff select,.ff textarea,.ff input{width:100%;padding:10px 12px;border:1px solid #d1d1d6;border-radius:10px;font-size:15px;background:#fff;color:#1c1c1e;-webkit-appearance:none}
+.ff select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7'%3E%3Cpath d='M0 0l6 7 6-7z' fill='%238e8e93'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px;background-color:#fff}
+.ff textarea{height:80px;resize:none;line-height:1.5}
+.sub-btn{width:100%;padding:14px;border-radius:12px;border:none;background:#007aff;color:#fff;font-size:16px;font-weight:600}
+.sub-btn:active{background:#0062cc}
+.ferr{color:#ff3b30;font-size:13px;margin-top:6px;display:none}
+.prefill-info{background:#e8f4fd;border-radius:8px;padding:9px 12px;font-size:13px;color:#0058c7;margin-bottom:12px}
+.warn{background:#ffeaea;border-radius:10px;padding:9px 12px;font-size:13px;color:#c80000;margin-bottom:10px}
+.empty{text-align:center;padding:60px 20px;color:#8e8e93;font-size:14px}
+.act-row{display:flex;gap:8px;margin-bottom:12px}
+.act-btn{flex:1;padding:11px;border-radius:10px;border:1px solid #d1d1d6;background:#fff;font-size:14px;font-weight:500}
+.rpt-card{background:#fff;border-radius:12px;padding:12px 14px;margin-bottom:8px}
+.loading{text-align:center;padding:80px 20px;color:#8e8e93}
+.spin{width:28px;height:28px;border:3px solid #e5e5ea;border-top-color:#007aff;border-radius:50%;animation:sp .7s linear infinite;margin:0 auto 12px}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* SETUP SCREEN */
+.setup{max-width:360px;margin:40px auto;padding:0 20px}
+.setup-card{background:#fff;border-radius:16px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.setup h1{font-size:20px;font-weight:700;margin-bottom:8px}
+.setup p{font-size:14px;color:#636366;line-height:1.6;margin-bottom:16px}
+.setup-btn{width:100%;padding:14px;border-radius:12px;border:none;background:#007aff;color:#fff;font-size:16px;font-weight:600;margin-bottom:10px}
+.setup-btn:active{background:#0062cc}
+.setup-input{width:100%;padding:10px 12px;border:1px solid #d1d1d6;border-radius:10px;font-size:14px;margin-bottom:10px;-webkit-appearance:none}
+.setup-or{text-align:center;color:#8e8e93;font-size:13px;margin:8px 0}
+.url-box{background:#f2f2f7;border-radius:10px;padding:12px;font-size:12px;color:#636366;word-break:break-all;margin-top:12px;border:1px solid #e5e5ea}
+.url-box strong{display:block;color:#1c1c1e;margin-bottom:4px;font-size:13px}
+.copy-url-btn{width:100%;padding:10px;border-radius:8px;border:1px solid #007aff;background:#fff;color:#007aff;font-size:13px;font-weight:600;margin-top:8px}
+</style>
+</head>
+<body>
+<div id="app"><div class="loading"><div class="spin"></div>Loading…</div></div>
+
+<script>
+const PD={"Cluster 01":{"573":{"n":"6BW","i":["Bath Panel 1","Bath Panel 2","Bed 1 Corner Vanity","Bed 1 Headboard_Double + Double door robes_Non Acc","Bed 1 IPS","Bed 1 Robe 1_Double door","Bed 1 Robe 2_Double door","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 3 Corner Vanity","Bed 3 Headboard_Twin","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 4 Corner Vanity","Bed 4 Headboard_Twin","Bed 4 Robe 1_LH","Bed 4 Robe 2_RH","Bed 5 Corner Vanity","Bed 5 Headboard_Twin","Bed 5 IPS","Bed 5 Robe 1_LH","Bed 5 Robe 2_RH","Bed 6 Corner Vanity","Bed 6 Headboard_Double + Double door robes_Non Acc","Bed 6 IPS","Bed 6 Robe 1_Double door","Bed 6 Robe 2_Double door","Bed 6 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 9"]},"574":{"n":"6BW","i":["Bath Panel 1","Bath Panel 2","Bed 1 Corner Vanity","Bed 1 Headboard_Double + Double door robes_Non Acc","Bed 1 IPS","Bed 1 Robe 1_Double door","Bed 1 Robe 2_Double door","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 3 Corner Vanity","Bed 3 Headboard_Twin","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 4 Corner Vanity","Bed 4 Headboard_Twin","Bed 4 Robe 1_LH","Bed 4 Robe 2_RH","Bed 5 Corner Vanity","Bed 5 Headboard_Twin","Bed 5 IPS","Bed 5 Robe 1_LH","Bed 5 Robe 2_RH","Bed 6 Corner Vanity","Bed 6 Headboard_Double + Double door robes_Non Acc","Bed 6 IPS","Bed 6 Robe 1_Double door","Bed 6 Robe 2_Double door","Bed 6 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 9"]},"575":{"n":"6BW","i":["Bath Panel 1","Bath Panel 2","Bed 1 Corner Vanity","Bed 1 Headboard_Double + Double door robes_Non Acc","Bed 1 IPS","Bed 1 Robe 1_Double door","Bed 1 Robe 2_Double door","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 3 Corner Vanity","Bed 3 Headboard_Twin","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 4 Corner Vanity","Bed 4 Headboard_Twin","Bed 4 Robe 1_LH","Bed 4 Robe 2_RH","Bed 5 Corner Vanity","Bed 5 Headboard_Twin","Bed 5 IPS","Bed 5 Robe 1_LH","Bed 5 Robe 2_RH","Bed 6 Corner Vanity","Bed 6 Headboard_Double + Double door robes_Non Acc","Bed 6 IPS","Bed 6 Robe 1_Double door","Bed 6 Robe 2_Double door","Bed 6 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 9"]},"576":{"n":"6BWa","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double + Double door robes_Non Acc","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 3 Corner Vanity","Bed 3 Headboard_Twin","Bed 4 Corner Vanity","Bed 4 Headboard_Double","Bed 4 TV Box","Bed 5 Corner Vanity","Bed 5 Headboard_Twin","Bed 5 IPS","Bed 6 Corner Vanity","Bed 6 Desk","Bed 6 Headboard_Twin_Acc","Coat Hook 1","Coat Hook 2","Harth Stone","Type 10"]}},"Cluster 03 First Floor":{"577":{"n":"4BE","i":["Bath Panel 2","Bed 2 Flat Vanity","Bed 2 Headboard_Double","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Corner Vanity","Bed 3 Headboard_Twin","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Bed 4 Flat Vanity","Bed 4 Headboard_Twin","Bed 4 IPS Panel","Bed 4 Robe 1_LH","Bed 4 Robe 2_RH","Bed 4 TV Box"]},"578":{"n":"4BE","i":["Bath Panel 2","Bed 2 Flat Vanity","Bed 2 Headboard_Double","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Corner Vanity","Bed 3 Headboard_Twin","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Bed 4 Flat Vanity","Bed 4 Headboard_Twin","Bed 4 IPS Panel","Bed 4 Robe 1_LH","Bed 4 Robe 2_RH","Bed 4 TV Box"]},"579":{"n":"4BE","i":["Bath Panel 2","Bed 2 Flat Vanity","Bed 2 Headboard_Double","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Corner Vanity","Bed 3 Headboard_Twin","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Bed 4 Flat Vanity","Bed 4 Headboard_Twin","Bed 4 IPS Panel","Bed 4 Robe 1_LH","Bed 4 Robe 2_RH","Bed 4 TV Box"]}},"Cluster 03 Ground Floor":{"577":{"n":"4BE","i":["Bath Panel 1","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Coat Hook 1","Coat Hook 2","Games Room Cue Holder","Games Room Drinks shelf w/upstand","Games Room Oak Cupboard","Harth Stone","Type 7H"]},"578":{"n":"4BE","i":["Bath Panel 1","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Coat Hook 1","Coat Hook 2","Games Room Cue Holder","Games Room Drinks shelf w/upstand","Games Room Oak Cupboard","Harth Stone","Type 7H"]},"579":{"n":"4BE","i":["Bath Panel 1","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Coat Hook 1","Coat Hook 2","Games Room Cue Holder","Games Room Drinks shelf w/upstand","Games Room Oak Cupboard","Harth Stone","Type 7H"]}},"Cluster 04":{"558":{"n":"4BE","i":["Bath Panel 1","Bath Panel 2"]},"559":{"n":"4BE","i":["Bath Panel 1","Bath Panel 2"]},"560":{"n":"4BE","i":["Bath Panel 1","Bath Panel 2"]},"561":{"n":"4BE","i":["Bath Panel 1","Bath Panel 2"]},"565":{"n":"4BE","i":["Bath Panel 1","Bath Panel 2"]},"566":{"n":"4BEa","i":["Bath Panel"]}},"Cluster 04 First Floor":{"558":{"n":"4BE","i":["Bed 2 Flat Vanity","Bed 2 Headboard_Double","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Corner Vanity","Bed 3 Headboard_Twin","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Bed 4 Flat Vanity","Bed 4 Headboard_Twin","Bed 4 IPS Panel","Bed 4 Robe 1_LH","Bed 4 Robe 2_RH","Bed 4 TV Box"]},"559":{"n":"4BE","i":["Bed 2 Flat Vanity","Bed 2 Headboard_Double","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Corner Vanity","Bed 3 Headboard_Twin","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Bed 4 Flat Vanity","Bed 4 Headboard_Twin","Bed 4 IPS Panel","Bed 4 Robe 1_LH","Bed 4 Robe 2_RH","Bed 4 TV Box"]},"560":{"n":"4BE","i":["Bed 2 Flat Vanity","Bed 2 Headboard_Double","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Corner Vanity","Bed 3 Headboard_Twin","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Bed 4 Flat Vanity","Bed 4 Headboard_Twin","Bed 4 IPS Panel","Bed 4 Robe 1_LH","Bed 4 Robe 2_RH","Bed 4 TV Box"]},"561":{"n":"4BE","i":["Bed 2 Flat Vanity","Bed 2 Headboard_Double","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Corner Vanity","Bed 3 Headboard_Twin","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Bed 4 Flat Vanity","Bed 4 Headboard_Twin","Bed 4 IPS Panel","Bed 4 Robe 1_LH","Bed 4 Robe 2_RH","Bed 4 TV Box"]},"565":{"n":"4BE","i":["Bed 2 Flat Vanity","Bed 2 Headboard_Double","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Corner Vanity","Bed 3 Headboard_Twin","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Bed 4 Flat Vanity","Bed 4 Headboard_Twin","Bed 4 IPS Panel","Bed 4 Robe 1_LH","Bed 4 Robe 2_RH","Bed 4 TV Box"]},"566":{"n":"4BEa","i":["Bed 2 Flat Vanity","Bed 2 Headboard_Double","Bed 2 IPS Panel","Bed 2 TV Box","Bed 3 Corner Vanity","Bed 3 Headboard_Twin","Bed 3 IPS Panel","Bed 3 TV Box","Bed 4 Flat Vanity","Bed 4 Headboard_Twin","Bed 4 IPS Panel","Bed 4 TV Box"]}},"Cluster 04 Ground Floor":{"558":{"n":"4BE","i":["Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Coat Hook 1","Coat Hook 2","Games Room Cue Holder","Games Room Drinks shelf w/upstand","Games Room Oak Cupboard","Harth Stone","Type 7H"]},"559":{"n":"4BE","i":["Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Coat Hook 1","Coat Hook 2","Games Room Cue Holder","Games Room Drinks shelf w/upstand","Games Room Oak Cupboard","Harth Stone","Type 7H"]},"560":{"n":"4BE","i":["Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Coat Hook 1","Coat Hook 2","Games Room Cue Holder","Games Room Drinks shelf w/upstand","Games Room Oak Cupboard","Harth Stone","Type 7H"]},"561":{"n":"4BE","i":["Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Coat Hook 1","Coat Hook 2","Games Room Cue Holder","Games Room Drinks shelf w/upstand","Games Room Oak Cupboard","Harth Stone","Type 7H"]},"565":{"n":"4BE","i":["Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Coat Hook 1","Coat Hook 2","Games Room Cue Holder","Games Room Drinks shelf w/upstand","Games Room Oak Cupboard","Harth Stone","Type 7H"]},"566":{"n":"4BEa","i":["Bed 1 Corner Vanity","Bed 1 Desk","Bed 1 Headboard_Twin_Acc","Bed 1 TV Box","Coat Hook 1","Coat Hook 2","Games Room Cue Holder","Games Room Drinks shelf w/upstand","Games Room Oak Cupboard","Harth Stone","Type 8"]}},"Cluster 05":{"562":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]},"563":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]},"564":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]},"567":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]},"568":{"n":"2BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Twin","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Double","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"569":{"n":"2BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Twin","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Double","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"570":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"571":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"572":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]}},"Cluster 06":{"551":{"n":"3BWa","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Desk","Bed 1 Headboard_Twin_Acc","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Double","Bed 2 IPS Panel","Bed 3 Corner Vanity","Bed 3 Headboard_Twin","Coat Hook 1","Coat Hook 2","Harth Stone","Type 2H"]},"552":{"n":"3BEa","i":["Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Desk","Bed 2 Headboard_Twin_Acc","Bed 2 TV Box","Bed 3 Corner Vanity","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 4H"]},"555":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"556":{"n":"3BWa","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Desk","Bed 1 Headboard_Twin_Acc","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Double","Bed 2 IPS Panel","Bed 3 Corner Vanity","Bed 3 Headboard_Twin","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 2"]},"557":{"n":"3BEa","i":["Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Desk","Bed 2 Headboard_Twin_Acc","Bed 2 TV Box","Bed 3 Corner Vanity","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 4"]}},"Cluster 07":{"544":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"545":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"549":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"550":{"n":"2BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Twin","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Double","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]},"553":{"n":"2BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Twin","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Double","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]},"554":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]}},"Cluster 08":{"538":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]},"539":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]},"540":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]},"541":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]},"546":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"547":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"548":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]}},"Cluster 09":{"531":{"n":"3BES","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"532":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"535":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"536":{"n":"2BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Twin","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Double","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"537":{"n":"2BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Twin","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Double","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"542":{"n":"3BES","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"543":{"n":"3BES","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]}},"Cluster 10":{"528":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]},"529":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]},"530":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"533":{"n":"2BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Twin","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Double","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"534":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]}},"Cluster 11":{"517":{"n":"3BES","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"518":{"n":"2BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Twin","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Double","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"523":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"524":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"525":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]},"526":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]},"527":{"n":"3BES","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]}},"Cluster 12":{"514":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]},"515":{"n":"2BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Twin","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Double","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]},"516":{"n":"2BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Twin","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Double","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]},"519":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]},"520":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"521":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"522":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]}},"Cluster 13":{"502":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"503":{"n":"2BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Twin","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Double","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"504":{"n":"2BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Twin","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Double","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"505":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"510":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"511":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"512":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]},"513":{"n":"3BES","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]}},"Cluster 14":{"497":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]},"498":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]},"499":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]},"500":{"n":"2BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Twin","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Double","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]},"501":{"n":"2BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Twin","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Double","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3H"]},"506":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"507":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"508":{"n":"2BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Twin","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Double","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]},"509":{"n":"3BE","i":["Bath Panel","Bed 1 Corner Vanity","Bed 1 Headboard_Double","Bed 1 IPS Panel","Bed 1 Robe 1_LH","Bed 1 Robe 2_RH","Bed 1 TV Box","Bed 2 Corner Vanity","Bed 2 Headboard_Twin","Bed 2 IPS Panel","Bed 2 Robe 1_LH","Bed 2 Robe 2_RH","Bed 2 TV Box","Bed 3 Headboard_Double","Bed 3 IPS Panel","Bed 3 Robe 1_LH","Bed 3 Robe 2_RH","Bed 3 TV Box","Coat Hook 1","Coat Hook 2","Harth Stone","Type 3"]}}};
+
+const SS=['Delivered','Installed','Installed - Snagged','Finished'];
+const NS=['Open','In Progress','Awaiting Factory','Fixed','Closed'];
+const BIN_URL='https://api.jsonbin.io/v3/b';
+const API_KEY='$2a$10$placeholder'; // not needed for public bins
+
+let S={st:{},snags:[],nid:1};
+let V='cl',C='',L='',PF=null,FL='all';
+let binId=localStorage.getItem('cp_bin_id')||'';
+let syncing=false,saveTimer=null;
+
+// ── JSONBin API (public bins - no API key needed) ─────────────────
+async function createBin(){
+  try{
+    const r=await fetch('https://api.jsonbin.io/v3/b',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Bin-Name':'CP-Tracker','X-Bin-Private':'false'},
+      body:JSON.stringify({st:{},snags:[],nid:1})
+    });
+    const d=await r.json();
+    return d.metadata&&d.metadata.id?d.metadata.id:null;
+  }catch(e){return null;}
+}
+
+async function readBin(){
+  if(!binId)return false;
+  try{
+    const r=await fetch('https://api.jsonbin.io/v3/b/'+binId+'/latest');
+    const d=await r.json();
+    if(d.record){S=d.record;if(!S.st)S.st={};if(!S.snags)S.snags=[];if(!S.nid)S.nid=1;return true;}
+  }catch(e){}
+  return false;
+}
+
+async function writeBin(){
+  if(!binId)return;
+  syncing=true;updateSync('saving');
+  try{
+    await fetch('https://api.jsonbin.io/v3/b/'+binId,{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(S)
+    });
+    updateSync('saved');
+  }catch(e){updateSync('error');}
+  syncing=false;
+}
+
+function schedSave(){clearTimeout(saveTimer);saveTimer=setTimeout(writeBin,800);}
+
+function updateSync(state){
+  const el=document.getElementById('sync-state');
+  if(!el)return;
+  if(state==='saving')el.innerHTML='<span class="dot dot-amber"></span>Saving…';
+  else if(state==='error')el.innerHTML='<span class="dot dot-red"></span>Save failed — check connection';
+  else el.innerHTML='<span class="dot dot-green"></span>Synced across all devices';
+}
+
+// ── Helpers ───────────────────────────────────────────────────────
+function gS(c,l,i){return S.st[c+'|'+l+'|'+i]||'';}
+function sS(c,l,i,v){S.st[c+'|'+l+'|'+i]=v;schedSave();}
+function today(){return new Date().toISOString().split('T')[0];}
+function prog(c,l){const its=PD[c][l].i,d=its.filter(i=>gS(c,l,i)==='Finished').length;return{d,t:its.length,p:its.length?Math.round(d/its.length*100):0};}
+function oS(c,l){return S.snags.filter(s=>s.c===c&&s.l===l&&s.st!=='Fixed'&&s.st!=='Closed').length;}
+function scl(s){return{Delivered:'del',Installed:'ins','Installed - Snagged':'sn',Finished:'fin'}[s]||'';}
+function snCl(s){return{Open:'op','In Progress':'ip','Awaiting Factory':'af'}[s]||'fx';}
+function e(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function toast(m,err){
+  let t=document.getElementById('_t');
+  if(!t){t=document.createElement('div');t.id='_t';Object.assign(t.style,{position:'fixed',bottom:'28px',left:'50%',transform:'translateX(-50%)',padding:'10px 22px',borderRadius:'100px',fontSize:'14px',fontWeight:'600',zIndex:'9999',pointerEvents:'none',whiteSpace:'nowrap',opacity:'0',transition:'opacity .25s'});document.body.appendChild(t);}
+  t.style.background=err?'#ff3b30':'#34c759';t.style.color='#fff';
+  t.textContent=m;t.style.opacity='1';
+  clearTimeout(t._x);t._x=setTimeout(()=>{t.style.opacity='0';},2500);
+}
+
+// ── SETUP SCREEN ──────────────────────────────────────────────────
+function showSetup(){
+  document.getElementById('app').innerHTML=`
+  <div class="setup">
+    <div class="setup-card">
+      <h1>CP Tracker Setup</h1>
+      <p>This creates a free sync link so your phone and PC always show the same data. Takes 10 seconds.</p>
+      <button class="setup-btn" id="create-btn">Create Sync Link</button>
+      <div class="setup-or">— or enter an existing sync ID —</div>
+      <input class="setup-input" id="existing-id" placeholder="Paste existing Bin ID here…">
+      <button class="setup-btn" id="use-existing-btn" style="background:#34c759">Use This ID</button>
+    </div>
+  </div>`;
+  document.getElementById('create-btn').onclick=async()=>{
+    const btn=document.getElementById('create-btn');
+    btn.textContent='Creating…';btn.disabled=true;
+    const id=await createBin();
+    if(id){
+      binId=id;
+      localStorage.setItem('cp_bin_id',id);
+      showSyncSuccess(id);
+    }else{
+      btn.textContent='Failed — check internet connection';
+      btn.style.background='#ff3b30';
+    }
+  };
+  document.getElementById('use-existing-btn').onclick=()=>{
+    const id=document.getElementById('existing-id').value.trim();
+    if(!id){alert('Please enter a Bin ID');return;}
+    binId=id;localStorage.setItem('cp_bin_id',id);
+    loadAndRender();
+  };
+}
+
+function showSyncSuccess(id){
+  const syncUrl='https://api.jsonbin.io/v3/b/'+id+'/latest';
+  document.getElementById('app').innerHTML=`
+  <div class="setup">
+    <div class="setup-card">
+      <h1>Sync Ready!</h1>
+      <p>Your tracker is set up. To use it on another device, open this HTML file and enter the Bin ID below when prompted.</p>
+      <div class="url-box">
+        <strong>Your Bin ID (save this!):</strong>
+        ${e(id)}
+      </div>
+      <button class="copy-url-btn" id="copy-id-btn">Copy Bin ID</button>
+      <br><br>
+      <button class="setup-btn" id="continue-btn">Open Tracker</button>
+    </div>
+  </div>`;
+  document.getElementById('copy-id-btn').onclick=()=>{
+    navigator.clipboard&&navigator.clipboard.writeText(id).then(()=>toast('Bin ID copied!'));
+  };
+  document.getElementById('continue-btn').onclick=()=>loadAndRender();
+}
+
+async function loadAndRender(){
+  document.getElementById('app').innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';
+  await readBin();
+  render();
+}
+
+// ── RENDER ────────────────────────────────────────────────────────
+function render(){
+  const app=document.getElementById('app');
+  app.innerHTML='';
+  const el=document.createElement('div');
+  if(V==='cl')el.innerHTML=vCl();
+  else if(V==='lo')el.innerHTML=vLo();
+  else if(V==='it')el.innerHTML=vIt();
+  else if(V==='add')el.innerHTML=vAdd();
+  else if(V==='log')el.innerHTML=vLog();
+  else if(V==='rep')el.innerHTML=vRep();
+  app.appendChild(el);
+  bind();
+  window.scrollTo(0,0);
+}
+
+function syncBar(){
+  return '<div class="sync-bar"><span id="sync-state"><span class="dot dot-green"></span>Synced</span>'
+    +'<button id="refresh-btn" style="background:none;border:none;color:#007aff;font-size:12px;cursor:pointer">Refresh</button></div>';
+}
+
+function nav(on){
+  const tabs=[['cl','Status'],['log','Snag Log'],['rep','Report'],['add','+ Snag']];
+  return '<div class="nav">'+tabs.map(([v,l])=>'<button id="n-'+v+'" class="'+(on===v?'on':'')+'">'+l+'</button>').join('')+'</div>'+syncBar();
+}
+
+function vCl(){
+  const cls=Object.keys(PD).sort();
+  let ti=0,td=0,tos=0;
+  cls.forEach(c=>Object.keys(PD[c]).forEach(l=>{PD[c][l].i.forEach(i=>{ti++;if(gS(c,l,i)==='Finished')td++;});tos+=oS(c,l);}));
+  const pct=ti?Math.round(td/ti*100):0;
+  const tl=Object.values(PD).reduce((a,c)=>a+Object.keys(c).length,0);
+  let h=nav('cl')+'<div class="page"><div class="stats">'
+    +'<div class="stat"><div class="stat-n" style="color:#007aff">'+tl+'</div><div class="stat-l">Lodges</div></div>'
+    +'<div class="stat"><div class="stat-n" style="color:#34c759">'+pct+'%</div><div class="stat-l">Complete</div></div>'
+    +'<div class="stat"><div class="stat-n" style="color:#ff9500">'+td+'</div><div class="stat-l">Items done</div></div>'
+    +'<div class="stat"><div class="stat-n" style="color:#ff3b30">'+tos+'</div><div class="stat-l">Open snags</div></div>'
+    +'</div>';
+  cls.forEach((c,i)=>{
+    const ls=Object.keys(PD[c]);let cd=0,ct=0,cs=0;
+    ls.forEach(l=>{const p=prog(c,l);cd+=p.d;ct+=p.t;cs+=oS(c,l);});
+    const cp=ct?Math.round(cd/ct*100):0;
+    h+='<button class="row-btn" id="cl-'+i+'">'
+      +'<div class="row-head"><span class="row-title">'+e(c)+'</span>'
+      +'<span class="row-meta">'+(cs>0?'<span class="row-snag">'+cs+' snag'+(cs>1?'s':'')+'</span>':'')+ls.length+' &rsaquo;</span></div>'
+      +'<div class="pn"><span>'+cd+'/'+ct+'</span><span>'+cp+'%</span></div>'
+      +'<div class="pb"><div class="pf '+(cp===100?'g':cp>0?'b':'')+'" style="width:'+cp+'%"></div></div></button>';
+  });
+  return h+'</div>';
+}
+
+function vLo(){
+  const ls=Object.keys(PD[C]).sort((a,b)=>+a-+b);
+  let h='<div class="hdr"><button class="back-btn" id="back-cl">&#8249; Clusters</button>'
+    +'<span class="hdr-t">'+e(C)+'</span>'
+    +'<button class="add-btn" id="add-cl">+ Snag</button></div>'
+    +syncBar()+'<div class="page">';
+  ls.forEach((l,i)=>{
+    const p=prog(C,l),os=oS(C,l);
+    h+='<button class="row-btn" id="lo-'+i+'">'
+      +'<div class="row-head"><span class="row-title" style="color:#007aff">Lodge '+l+' <span style="color:#8e8e93;font-size:13px;font-weight:400">'+e(PD[C][l].n)+'</span></span>'
+      +'<span class="row-meta">'+(os>0?'<span class="row-snag">'+os+'</span>':'')+'&rsaquo;</span></div>'
+      +'<div class="pn"><span>'+p.d+'/'+p.t+'</span><span>'+p.p+'%</span></div>'
+      +'<div class="pb"><div class="pf '+(p.p===100?'g':p.p>0?'b':'')+'" style="width:'+p.p+'%"></div></div></button>';
+  });
+  return h+'</div>';
+}
+
+function vIt(){
+  const its=PD[C][L].i,os=oS(C,L),p=prog(C,L);
+  let h='<div class="hdr"><button class="back-btn" id="back-lo">&#8249; '+e(C.replace('Cluster ','Cl.'))+'</button>'
+    +'<span class="hdr-t">Lodge '+L+'</span>'
+    +'<button class="add-btn" id="add-lo">+ Snag</button></div>'
+    +syncBar()+'<div class="page">';
+  if(os>0)h+='<div class="warn">'+os+' open snag'+(os>1?'s':'')+' on this lodge</div>';
+  h+='<div style="margin-bottom:12px"><div class="pn"><span>'+p.d+'/'+p.t+' items</span><span>'+p.p+'%</span></div>'
+    +'<div class="pb"><div class="pf '+(p.p===100?'g':p.p>0?'b':'')+'" style="width:'+p.p+'%"></div></div></div>';
+  its.forEach((item,i)=>{
+    const s=gS(C,L,item),ic=S.snags.filter(sn=>sn.c===C&&sn.l===L&&sn.i===item&&sn.st!=='Fixed'&&sn.st!=='Closed').length;
+    h+='<div class="item-card"><div class="item-name">'+e(item)+(ic>0?' <span style="color:#ff3b30;font-size:12px">('+ic+')</span>':'')+'</div>'
+      +'<div class="sbtns">';
+    SS.forEach(sv=>{h+='<button class="'+(s===sv?scl(sv):'')+'" id="sb-'+i+'-'+sv.replace(/\s+/g,'_')+'">'+sv+'</button>';});
+    h+='</div><button class="snag-link" id="sl-'+i+'">+ log snag for this item</button></div>';
+  });
+  return h+'</div>';
+}
+
+function vAdd(){
+  const cls=Object.keys(PD).sort(),pf=PF||{},fC=pf.c||'',fL=pf.l||'',fI=pf.i||'';
+  const loC=fC?Object.keys(PD[fC]).sort((a,b)=>+a-+b):[],itL=fC&&fL?PD[fC][fL].i:[];
+  let h=nav('add')+'<div class="page">';
+  if(fC||fL)h+='<div class="prefill-info">'+[fC,fL?'Lodge '+fL:'',fI].filter(Boolean).join(' \u203a ')+'</div>';
+  h+='<div class="form-block"><h3>Location</h3>'
+    +'<div class="ff"><label>Cluster</label><select id="fa-c"><option value="">Select cluster\u2026</option>';
+  cls.forEach(c=>{h+='<option value="'+e(c)+'"'+(c===fC?' selected':'')+'>'+e(c)+'</option>';});
+  h+='</select></div><div class="ff"><label>Lodge</label><select id="fa-l"><option value="">Select lodge\u2026</option>';
+  loC.forEach(l=>{h+='<option value="'+l+'"'+(l===fL?' selected':'')+'>Lodge '+l+' ('+e(PD[fC][l].n)+')</option>';});
+  h+='</select></div><div class="ff"><label>Item <span style="color:#8e8e93;font-weight:400">(optional)</span></label><select id="fa-i"><option value="">\u2014 General snag \u2014</option>';
+  itL.forEach(it=>{h+='<option value="'+e(it)+'"'+(it===fI?' selected':'')+'>'+e(it)+'</option>';});
+  h+='</select></div></div><div class="form-block"><h3>Snag details</h3>'
+    +'<div class="ff"><label>Description</label><textarea id="fa-n" placeholder="Describe the issue\u2026"></textarea></div>'
+    +'<div class="ff"><label>Date</label><input type="date" id="fa-d" value="'+today()+'"></div>'
+    +'<div class="ff"><label>Status</label><select id="fa-s">';
+  NS.forEach(s=>{h+='<option>'+s+'</option>';});
+  h+='</select></div></div><button class="sub-btn" id="log-btn">Log Snag</button><p class="ferr" id="fa-err"></p></div>';
+  return h;
+}
+
+function vLog(){
+  let sn=[...S.snags].reverse();
+  if(FL!=='all')sn=sn.filter(s=>s.st===FL);
+  let h=nav('log')+'<div class="chips">';
+  ['all','Open','In Progress','Awaiting Factory','Fixed','Closed'].forEach(f=>{
+    h+='<button id="f-'+f.replace(/\s+/g,'_')+'" class="'+(FL===f?'on':'')+'">'+( f==='all'?'All':f)+'</button>';
+  });
+  h+='</div><div class="page">';
+  if(!sn.length)h+='<div class="empty">'+(FL==='all'?'No snags logged yet':'No snags with this status')+'</div>';
+  sn.forEach(s=>{
+    h+='<div class="snag-card '+snCl(s.st)+'">'
+      +'<div class="stags"><span class="stag">'+e(s.c)+'</span><span class="stag stag-l">Lodge '+s.l+'</span>'
+      +(s.i?'<span class="stag">'+e(s.i)+'</span>':'')+'</div>'
+      +'<div class="snote">'+e(s.note)+'</div>'
+      +'<div class="sfoot"><span class="sdate">'+s.d+'</span>'
+      +'<div style="display:flex;align-items:center;gap:8px"><select class="ssel" id="ss-'+s.id+'">';
+    NS.forEach(sv=>{h+='<option'+(s.st===sv?' selected':'')+'>'+sv+'</option>';});
+    h+='</select><button class="del-btn" id="sd-'+s.id+'">&#128465;</button></div></div></div>';
+  });
+  return h+'</div>';
+}
+
+function vRep(){
+  const op=S.snags.filter(s=>['Open','In Progress','Awaiting Factory'].includes(s.st));
+  let h=nav('rep')+'<div class="page"><div class="act-row">'
+    +'<button class="act-btn" id="print-btn">&#128424; Print / PDF</button>'
+    +'<button class="act-btn" id="copy-btn">&#128203; Copy text</button>'
+    +'</div><div style="font-size:13px;color:#8e8e93;margin-bottom:12px">'+op.length+' open \xb7 '+today()+'</div>';
+  if(!op.length)h+='<div class="empty">No open snags</div>';
+  op.forEach(s=>{
+    h+='<div class="rpt-card"><div style="font-weight:600;font-size:14px;margin-bottom:3px">Lodge '+s.l+' <span style="font-weight:400;color:#8e8e93">\xb7 '+e(s.c)+'</span></div>'
+      +(s.i?'<div style="font-size:12px;color:#8e8e93;margin-bottom:4px">'+e(s.i)+'</div>':'')
+      +'<div style="font-size:13px;line-height:1.5;margin-bottom:6px">'+e(s.note)+'</div>'
+      +'<div style="font-size:11px;color:#8e8e93;display:flex;justify-content:space-between"><span>'+s.d+'</span><span>'+s.st+'</span></div></div>';
+  });
+  return h+'</div>';
+}
+
+function bind(){
+  const $=id=>document.getElementById(id);
+  const cls=Object.keys(PD).sort();
+  if($('n-cl'))$('n-cl').onclick=()=>{V='cl';render();};
+  if($('n-log'))$('n-log').onclick=()=>{V='log';FL='all';render();};
+  if($('n-rep'))$('n-rep').onclick=()=>{V='rep';render();};
+  if($('n-add'))$('n-add').onclick=()=>{V='add';PF=null;render();};
+  if($('back-cl'))$('back-cl').onclick=()=>{V='cl';render();};
+  if($('back-lo'))$('back-lo').onclick=()=>{V='lo';render();};
+  if($('add-cl'))$('add-cl').onclick=()=>{PF={c:C,l:'',i:''};V='add';render();};
+  if($('add-lo'))$('add-lo').onclick=()=>{PF={c:C,l:L,i:''};V='add';render();};
+  if($('refresh-btn'))$('refresh-btn').onclick=async()=>{
+    $('refresh-btn').textContent='Refreshing…';
+    await readBin();render();toast('Refreshed \u2713');
+  };
+  cls.forEach((c,i)=>{const b=$('cl-'+i);if(b)b.onclick=()=>{C=c;V='lo';render();};});
+  if(V==='lo')Object.keys(PD[C]).sort((a,b)=>+a-+b).forEach((l,i)=>{const b=$('lo-'+i);if(b)b.onclick=()=>{L=l;V='it';render();};});
+  if(V==='it'){
+    PD[C][L].i.forEach((item,i)=>{
+      SS.forEach(sv=>{
+        const b=$('sb-'+i+'-'+sv.replace(/\s+/g,'_'));
+        if(b)b.onclick=()=>{const cur=gS(C,L,item);sS(C,L,item,cur===sv?'':sv);render();};
+      });
+      const sl=$('sl-'+i);if(sl)sl.onclick=()=>{PF={c:C,l:L,i:item};V='add';render();};
+    });
+  }
+  ['all','Open','In Progress','Awaiting Factory','Fixed','Closed'].forEach(f=>{
+    const b=$('f-'+f.replace(/\s+/g,'_'));if(b)b.onclick=()=>{FL=f;render();};
+  });
+  S.snags.forEach(s=>{
+    const sel=$('ss-'+s.id);if(sel)sel.onchange=function(){s.st=this.value;schedSave();render();};
+    const db=$('sd-'+s.id);if(db)db.onclick=()=>{if(!confirm('Delete?'))return;S.snags=S.snags.filter(x=>x.id!==s.id);schedSave();render();};
+  });
+  const faC=$('fa-c');if(faC)faC.onchange=function(){PF={c:this.value,l:'',i:''};render();};
+  const faL=$('fa-l');if(faL)faL.onchange=function(){PF={c:$('fa-c').value,l:this.value,i:''};render();};
+  const lb=$('log-btn');
+  if(lb)lb.onclick=()=>{
+    const c=$('fa-c').value,l=$('fa-l').value,i=$('fa-i').value;
+    const n=$('fa-n').value.trim(),d=$('fa-d').value||today(),st=$('fa-s').value;
+    const err=$('fa-err');
+    if(!c||!l||!n){err.style.display='block';err.textContent='Please fill in Cluster, Lodge and Description.';return;}
+    err.style.display='none';
+    S.snags.push({id:S.nid++,c,l,i,note:n,d,st});
+    if(i){const cs=gS(c,l,i);if(!cs||cs==='Installed')sS(c,l,i,'Installed - Snagged');}
+    schedSave();toast('Snag logged \u2713');
+    $('fa-n').value='';PF={c,l,i:''};
+  };
+  if($('print-btn'))$('print-btn').onclick=()=>window.print();
+  if($('copy-btn'))$('copy-btn').onclick=()=>{
+    const op=S.snags.filter(s=>['Open','In Progress','Awaiting Factory'].includes(s.st));
+    if(!op.length){toast('No open snags');return;}
+    const txt='Factory Report - '+today()+'\n\n'+op.map(s=>'Lodge '+s.l+' ('+s.c+')'+(s.i?' | '+s.i:'')+'\n'+s.note+'\n'+s.d+' | '+s.st).join('\n\n');
+    if(navigator.clipboard)navigator.clipboard.writeText(txt).then(()=>toast('Copied \u2713'));
+  };
+}
+
+// ── START ─────────────────────────────────────────────────────────
+if(binId){
+  loadAndRender();
+}else{
+  showSetup();
+}
+</script>
+</body>
+</html>
