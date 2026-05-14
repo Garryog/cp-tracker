@@ -95,19 +95,10 @@ let binId=localStorage.getItem('cp_binid')||'';
 let saveTimer=null;
 
 async function initBin(){
-  if(binId){await readBin();render();return;}
-  try{
-    const r=await fetch(BURL,{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-Master-Key':MKEY,'X-Bin-Name':'CP-Tracker','X-Bin-Private':'true'},
-      body:JSON.stringify({st:{},snags:[],nid:1})
-    });
-    const d=await r.json();
-    if(d.metadata&&d.metadata.id){
-      binId=d.metadata.id;
-      localStorage.setItem('cp_binid',binId);
-    }
-  }catch(e){console.log('initBin error',e);}
+  // Always use the hardcoded shared bin ID - same on every device
+  binId='6a05cd7bc0954111d821bddb';
+  localStorage.setItem('cp_binid',binId);
+  await readBin();
   render();
 }
 
