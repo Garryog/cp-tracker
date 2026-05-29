@@ -227,6 +227,32 @@ function vLo(){
   return h+'</div>';
 }
 
+function groupItems(its){
+  const kitKeys=['Kitchen —','Splashback','MDF Head Filler — Kitchen','Kitchen Plinth','Appliance Installation'];
+  let kitchen=[],beds={},other=[];
+  its.forEach(item=>{
+    if(kitKeys.some(k=>item.includes(k)))kitchen.push(item);
+    else if(item.startsWith('Bed ')){
+      const p=item.split(' ');
+      if(p.length>1&&!isNaN(+p[1])){const bn=+p[1];if(!beds[bn])beds[bn]=[];beds[bn].push(item);}
+      else other.push(item);
+    } else other.push(item);
+  });
+  const cvs=other.indexOf('Corner Vanity Shelf');
+  if(cvs>=0){
+    const cvBed=Object.keys(beds).map(Number).sort().find(bn=>beds[bn].some(i=>i.includes('Corner Vanity')&&!i.includes('Shelf')));
+    if(cvBed!==undefined){beds[cvBed].push('Corner Vanity Shelf');other.splice(cvs,1);}
+  }
+  ['Wardrobe Plinth','MDF Head Filler — Wardrobe'].forEach(key=>{
+    const idx2=other.findIndex(i=>i.includes(key));
+    if(idx2<0)return;
+    const robeBeds=Object.keys(beds).map(Number).filter(bn=>beds[bn].some(i=>i.includes('Robe')));
+    const target=robeBeds.length?Math.max(...robeBeds):(Object.keys(beds).length?Math.max(...Object.keys(beds).map(Number)):null);
+    if(target!==null){beds[target].push(other[idx2]);other.splice(idx2,1);}
+  });
+  return{kitchen,beds,other};
+}
+
 function vIt(){
   const its=lodgeItems(C,L),os=oS(C,L),p=prog(C,L);
   const grp=groupItems(its);
