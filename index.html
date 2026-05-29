@@ -40,7 +40,7 @@ const SUPA_WRITE_HDR={'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Cont
 let S={st:{},snags:[],photos:{},nid:1,misplaced:[],headboards:{}};
 let collapsed={};
 let pendingSave=false; // {key: true/false} where key = C+'|'+L+'|'+sectionTitle
-let V='cl',C='',L='',PF=null,FL='all';
+let V='cl',C='',L='',PF=null,FL='all',LFL=null;
 let saveTimer=null,pendingPhotos=[];
 
 // ── Sync ──────────────────────────────────────────────────────────
@@ -299,7 +299,7 @@ function vIt(){
   const openLodgeSnags=lodgeSnags.filter(s=>['Open','In Progress','Awaiting Factory'].includes(s.st));
   if(openLodgeSnags.length){
     h+='<div style="background:#fff5f5;border:1px solid #ffd0d0;border-radius:10px;padding:10px 12px;margin-bottom:12px">';
-    h+='<div style="font-size:12px;font-weight:600;color:#c80000;margin-bottom:8px">⚠ '+openLodgeSnags.length+' Open Snag'+(openLodgeSnags.length>1?'s':'')+' — tap to update</div>';
+    h+='<div id="open-snags-link" style="font-size:12px;font-weight:600;color:#c80000;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center"><span>⚠ '+openLodgeSnags.length+' Open Snag'+(openLodgeSnags.length>1?'s':'')+' — tap to update</span><span style="font-size:11px;color:#007aff;font-weight:500">View in Snag Log ›</span></div>';
     openLodgeSnags.forEach(s=>{
       h+='<div style="background:#fff;border-radius:8px;padding:8px 10px;margin-bottom:6px;border:1px solid #f0d0d0">'
        +(s.i?'<div style="font-size:11px;color:#8e8e93;font-weight:600">'+e(s.i)+'</div>':'')
@@ -387,7 +387,10 @@ function vAdd(){
 function vLog(){
   let sn=[...S.snags].reverse();
   if(FL!=='all')sn=sn.filter(s=>s.st===FL);
-  let h=nav('log')+'<div class="chips">';
+  if(LFL)sn=sn.filter(s=>s.c===LFL.c&&s.l===LFL.l);
+  let h=nav('log');
+  if(LFL)h+='<div style="background:#e7f0ff;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;font-size:13px"><span style="font-weight:600;color:#007aff">Lodge '+LFL.l+' only</span><button id="clear-lfl" style="background:#007aff;color:#fff;border:none;border-radius:12px;padding:3px 12px;font-size:12px;cursor:pointer">Show all lodges</button></div>';
+  h+='<div class="chips">';
   ['all','Open','In Progress','Awaiting Factory','Fixed','Closed'].forEach(f=>{
     h+='<button id="f-'+f.replace(/\s+/g,'_')+'" class="'+(FL===f?'on':'')+'">'+( f==='all'?'All':f)+'</button>';
   });
@@ -551,7 +554,7 @@ function bind(){
   const $=id=>document.getElementById(id);
   const cls=Object.keys(PD).sort();
   if($('n-cl'))$('n-cl').onclick=()=>{V='cl';render();};
-  if($('n-log'))$('n-log').onclick=()=>{V='log';FL='all';render();};
+  if($('n-log'))$('n-log').onclick=()=>{V='log';FL='all';LFL=null;render();};
   if($('n-rep'))$('n-rep').onclick=()=>{V='rep';render();};
   if($('n-add'))$('n-add').onclick=()=>{V='add';PF=null;render();};
   if($('n-mis'))$('n-mis').onclick=()=>{V='mis';render();};
@@ -582,6 +585,8 @@ function bind(){
 
   // Item status buttons and photos
   if(V==='it'){
+    // Tap warning bar to open snag log filtered to this lodge
+    if($('open-snags-link'))$('open-snags-link').onclick=()=>{LFL={c:C,l:L};V='log';render();};
     // Open snag status buttons
     document.querySelectorAll('.snagstat-btn').forEach(btn=>{
       btn.onclick=()=>{
@@ -625,6 +630,7 @@ function bind(){
   ['all','Open','In Progress','Awaiting Factory','Fixed','Closed'].forEach(f=>{
     const b=$('f-'+f.replace(/\s+/g,'_'));if(b)b.onclick=()=>{FL=f;render();};
   });
+  if($('clear-lfl'))$('clear-lfl').onclick=()=>{LFL=null;render();};
 
   // Snag actions
   S.snags.forEach(s=>{
@@ -650,6 +656,18 @@ function bind(){
     const n=$('fa-n').value.trim(),d=$('fa-d').value||today(),st=$('fa-s').value;
     const err=$('fa-err');
     if(!c||!l||!n){err.style.display='block';err.textContent='Please fill in Cluster, Lodge and Description.';return;}
+    // Warn if an open snag already exists for this item on this lodge
+    if(i){
+      const existing=S.snags.filter(sn=>sn.c===c&&sn.l===l&&sn.i===i&&!['Fixed','Closed'].includes(sn.st));
+      if(existing.length&&!lb.dataset.confirmed){
+        err.style.display='block';
+        err.style.background='#fff7e6';err.style.color='#b8860b';
+        err.textContent='⚠ This item already has '+existing.length+' open snag(s). Tap Log Snag again to add anyway.';
+        lb.dataset.confirmed='1';
+        return;
+      }
+    }
+    lb.dataset.confirmed='';
     err.style.display='none';
     S.snags.push({id:S.nid++,c,l,i,note:n,d,st,photos:[...pendingPhotos]});
     if(i){const cs=gS(c,l,i);if(!cs||cs==='Installed')sS(c,l,i,'Installed — Snagged');}
