@@ -294,7 +294,24 @@ function vIt(){
   const grp=groupItems(its);
   const bedNums=Object.keys(grp.beds).map(Number).sort();
   let h='<div class="hdr"><button class="back-btn" id="back-lo">&#8249; '+e(C.replace('Cluster ','Cl.'))+'</button><span class="hdr-t">Lodge '+L+'</span><button class="add-btn" id="add-lo">+ Snag</button></div>'+sb()+'<div class="page">';
-  if(os>0)h+='<div class="warn">'+os+' open snag'+(os>1?'s':'')+' on this lodge</div>';
+  // Open snags on this lodge - tappable to update status
+  const lodgeSnags=S.snags.filter(s=>s.c===C&&s.l===L);
+  const openLodgeSnags=lodgeSnags.filter(s=>['Open','In Progress','Awaiting Factory'].includes(s.st));
+  if(openLodgeSnags.length){
+    h+='<div style="background:#fff5f5;border:1px solid #ffd0d0;border-radius:10px;padding:10px 12px;margin-bottom:12px">';
+    h+='<div style="font-size:12px;font-weight:600;color:#c80000;margin-bottom:8px">⚠ '+openLodgeSnags.length+' Open Snag'+(openLodgeSnags.length>1?'s':'')+' — tap to update</div>';
+    openLodgeSnags.forEach(s=>{
+      h+='<div style="background:#fff;border-radius:8px;padding:8px 10px;margin-bottom:6px;border:1px solid #f0d0d0">'
+       +(s.i?'<div style="font-size:11px;color:#8e8e93;font-weight:600">'+e(s.i)+'</div>':'')
+       +'<div style="font-size:13px;line-height:1.4;margin:2px 0 6px">'+e(s.note)+'</div>'
+       +'<div style="display:flex;gap:5px;flex-wrap:wrap">'
+       +['Open','In Progress','Awaiting Factory','Fixed','Closed'].map(st=>
+         '<button class="snagstat-btn" data-snagid="'+s.id+'" data-snagst="'+st+'" style="padding:4px 8px;border-radius:12px;border:1px solid '+(s.st===st?'#007aff':'#d1d1d6')+';background:'+(s.st===st?'#007aff':'#f9f9f9')+';color:'+(s.st===st?'#fff':'#636366')+';font-size:11px;cursor:pointer">'+st+'</button>'
+       ).join('')
+       +'</div></div>';
+    });
+    h+='</div>';
+  }
   h+='<div style="margin-bottom:12px"><div class="pn"><span>'+p.d+'/'+p.t+' items</span><span>'+p.p+'%</span></div><div class="pb"><div class="pf '+(p.p===100?'g':p.p>0?'b':'')+'" style="width:'+p.p+'%"></div></div></div>';
 
   function sect(title,itemList,icon,bg){
@@ -565,6 +582,14 @@ function bind(){
 
   // Item status buttons and photos
   if(V==='it'){
+    // Open snag status buttons
+    document.querySelectorAll('.snagstat-btn').forEach(btn=>{
+      btn.onclick=()=>{
+        const sid=+btn.dataset.snagid, newSt=btn.dataset.snagst;
+        const snag=S.snags.find(x=>x.id===sid);
+        if(snag){snag.st=newSt;sched();toast('Snag '+newSt);render();}
+      };
+    });
     lodgeItems(C,L).forEach((item,i)=>{
       // Use index in full lodgeItems array for button IDs
       const gi=lodgeItems(C,L).indexOf(item);
