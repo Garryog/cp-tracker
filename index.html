@@ -43,14 +43,20 @@ async function readBin(){
     const r=await fetch(SUPA_URL+'/cp_tracker?id=eq.main',{headers:SUPA_HDR});
     const d=await r.json();
     if(d&&d[0]){
-      S.st=d[0].st||{};
+      // Merge server st with any pending local dirty keys
+      const serverSt=d[0].st||{};
+      if(dirtyKeys.size>0){
+        // Keep local dirty changes on top of server data
+        dirtyKeys.forEach(k=>{serverSt[k]=S.st[k];});
+      }
+      S.st=serverSt;
       S.snags=d[0].snags||[];
       S.nid=d[0].nid||1;
       S.photos=d[0].photos||{};
       S.misplaced=d[0].misplaced||[];
       S.headboards=d[0].headboards||{};
     }
-    dirtyKeys.clear(); // fresh load - no local changes pending
+    // Don't clear dirtyKeys here - only clear after successful write
   }catch(e){console.log('read error:',e);setSS('e');}
 }
 async function writeBin(){
