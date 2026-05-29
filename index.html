@@ -56,31 +56,19 @@ async function readBin(){
 async function writeBin(){
   setSS('s');
   try{
-    // Fetch latest from server first to avoid overwriting other device's changes
-    const r=await fetch(SUPA_URL+'/cp_tracker?id=eq.main',{headers:SUPA_HDR});
-    const d=await r.json();
-    let mergedSt=S.st;
-    let mergedSnags=S.snags;
-    let mergedPhotos=S.photos;
-    let mergedMisplaced=S.misplaced;
-    let mergedHb=S.headboards;
-    let mergedNid=S.nid;
-    if(d&&d[0]){
-      // Start with server state
-      mergedSt={...d[0].st||{}};
-      // Apply only our local dirty changes on top
-      dirtyKeys.forEach(k=>{mergedSt[k]=S.st[k];});
-      // For snags/photos/misplaced/headboards use whichever has more data
-      if((d[0].snags||[]).length>S.snags.length)mergedSnags=d[0].snags;
-      if(Object.keys(d[0].photos||{}).length>Object.keys(S.photos).length)mergedPhotos=d[0].photos;
-      if((d[0].misplaced||[]).length>S.misplaced.length)mergedMisplaced=d[0].misplaced;
-      mergedNid=Math.max(S.nid,d[0].nid||1);
-      // Update local state with merged result
-      S.st=mergedSt;S.snags=mergedSnags;S.photos=mergedPhotos;
-      S.misplaced=mergedMisplaced;S.nid=mergedNid;
+    // Only merge the st field - fetch server st and apply our dirty keys on top
+    if(dirtyKeys.size>0){
+      const r=await fetch(SUPA_URL+'/cp_tracker?id=eq.main',{headers:SUPA_HDR});
+      const d=await r.json();
+      if(d&&d[0]){
+        // Start from server's st, apply only local changes on top
+        const serverSt=d[0].st||{};
+        dirtyKeys.forEach(k=>{serverSt[k]=S.st[k];});
+        S.st=serverSt;
+      }
     }
-    dirtyKeys.clear(); // reset after successful merge
-    const body={st:mergedSt,snags:mergedSnags,nid:mergedNid,photos:mergedPhotos,misplaced:mergedMisplaced,headboards:mergedHb};
+    dirtyKeys.clear();
+    const body={st:S.st,snags:S.snags,nid:S.nid,photos:S.photos,misplaced:S.misplaced,headboards:S.headboards};
     await fetch(SUPA_URL+'/cp_tracker?id=eq.main',{
       method:'PATCH',
       headers:SUPA_WRITE_HDR,
