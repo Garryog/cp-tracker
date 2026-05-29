@@ -205,22 +205,21 @@ function vCl(){
   cls.forEach((cl,ci)=>{
     const lodges=Object.keys(PD[cl]).sort((a,b)=>+a-+b);
     const openSnags=S.snags.filter(s=>s.c===cl&&(s.st==='Open'||s.st==="In Progress")).length;
-    h+='<div style="margin-bottom:14px">'
-     +'<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#8e8e93;padding:0 2px;margin-bottom:6px">'
-     +e(cl)+(openSnags>0?' <span style="color:#ff3b30">('+openSnags+' snags)</span>':'')
+    h+='<div class="row-btn" style="display:block;margin-bottom:8px">'
+     +'<div class="row-head" style="margin-bottom:6px">'
+     +'<span class="row-title">'+e(cl)+'</span>'
+     +'<span class="row-meta">'+(openSnags>0?'<span class="row-snag">'+openSnags+'</span>':'')+lodges.length+' lodges</span>'
      +'</div>'
-     +'<div style="display:flex;flex-wrap:wrap;gap:8px">';
+     +'<div style="display:flex;flex-wrap:wrap;gap:6px">';
     lodges.forEach((l,li)=>{
       const p=prog(cl,l);
       const os=oS(cl,l);
-      const pct=p.p;
-      const bg=pct===100?'#eafaea':os>0?'#ffeaea':'#fff';
-      const border=pct===100?'#34c759':os>0?'#ff3b30':'#e5e5ea';
-      const txt=pct===100?'#1a7030':os>0?'#c80000':'#1c1c1e';
-      h+='<button id="lo-'+ci+'-'+li+'" style="background:'+bg+';border:2px solid '+border+';border-radius:10px;padding:8px 10px;min-width:60px;text-align:center;cursor:pointer">'
-       +'<div style="font-size:16px;font-weight:700;color:'+txt+'">'+l+'</div>'
-       +'<div style="font-size:10px;color:'+(pct===100?'#34c759':'#8e8e93')+';margin-top:2px">'+pct+'%</div>'
-       +(os>0?'<div style="font-size:9px;color:#ff3b30">'+os+'⚠</div>':'')
+      const bg=p.p===100?'#eafaea':os>0?'#ffeaea':'#f2f2f7';
+      const border=p.p===100?'#34c759':os>0?'#ff3b30':'#d1d1d6';
+      const txt=p.p===100?'#1a7030':os>0?'#c80000':'#1c1c1e';
+      h+='<button id="lo-'+ci+'-'+li+'" style="background:'+bg+';border:1.5px solid '+border+';border-radius:8px;padding:5px 8px;text-align:center;cursor:pointer;min-width:46px">'
+       +'<div style="font-size:14px;font-weight:700;color:'+txt+'">'+l+'</div>'
+       +'<div style="font-size:9px;color:'+(p.p===100?'#34c759':'#8e8e93')+'">'+p.p+'%</div>'
        +'</button>';
     });
     h+='</div></div>';
