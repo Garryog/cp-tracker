@@ -307,27 +307,71 @@ function vLo(){
   return h+'</div>';
 }
 
+function groupItems(its){
+  const kitKeys=['Kitchen \u2014','Splashback','MDF Head Filler \u2014 Kitchen','Kitchen Plinth','Appliance Installation'];
+  let kitchen=[],beds={},other=[];
+  its.forEach(item=>{
+    if(kitKeys.some(k=>item.includes(k))){kitchen.push(item);}
+    else if(item.startsWith('Bed ')){
+      const p=item.split(' ');
+      if(p.length>1&&!isNaN(+p[1])){const bn=+p[1];if(!beds[bn])beds[bn]=[];beds[bn].push(item);}
+      else other.push(item);
+    } else other.push(item);
+  });
+  const cvs=other.indexOf('Corner Vanity Shelf');
+  if(cvs>=0){
+    const cvBed=Object.keys(beds).map(Number).sort().find(bn=>beds[bn].some(i=>i.includes('Corner Vanity')&&!i.includes('Shelf')));
+    if(cvBed!==undefined){beds[cvBed].push('Corner Vanity Shelf');other.splice(cvs,1);}
+  }
+  ['Wardrobe Plinth','MDF Head Filler \u2014 Wardrobe'].forEach(key=>{
+    const idx2=other.findIndex(i=>i.includes(key));
+    if(idx2<0)return;
+    const robeBeds=Object.keys(beds).map(Number).filter(bn=>beds[bn].some(i=>i.includes('Robe')));
+    const target=robeBeds.length?Math.max(...robeBeds):(Object.keys(beds).length?Math.max(...Object.keys(beds).map(Number)):null);
+    if(target!==null){beds[target].push(other[idx2]);other.splice(idx2,1);}
+  });
+  return{kitchen,beds,other};
+}
+
 function vIt(){
   const its=PD[C][L].i,os=oS(C,L),p=prog(C,L);
+  const grp=groupItems(its);
+  const bedNums=Object.keys(grp.beds).map(Number).sort();
   let h='<div class="hdr"><button class="back-btn" id="back-lo">&#8249; '+e(C.replace('Cluster ','Cl.'))+'</button><span class="hdr-t">Lodge '+L+'</span><button class="add-btn" id="add-lo">+ Snag</button></div>'+sb()+'<div class="page">';
   if(os>0)h+='<div class="warn">'+os+' open snag'+(os>1?'s':'')+' on this lodge</div>';
   h+='<div style="margin-bottom:12px"><div class="pn"><span>'+p.d+'/'+p.t+' items</span><span>'+p.p+'%</span></div><div class="pb"><div class="pf '+(p.p===100?'g':p.p>0?'b':'')+'" style="width:'+p.p+'%"></div></div></div>';
-  its.forEach((item,i)=>{
-    const s=gS(C,L,item);
-    const ic=S.snags.filter(sn=>sn.c===C&&sn.l===L&&sn.i===item&&sn.st!=='Fixed'&&sn.st!=='Closed').length;
-    const itemPhotos=S.photos[pk(C,L,item)]||[];
-    h+='<div class="item-card"><div class="item-name">'+e(item)+(ic>0?' <span style="color:#ff3b30;font-size:12px">('+ic+')</span>':'')+'</div><div class="sbtns">';
-    SS.forEach(sv=>{h+='<button class="'+(s===sv?scl(sv):'')+'" id="sb-'+i+'-'+sv.replace(/\s+/g,'_')+'">'+sv+'</button>';});
-    h+='</div>';
-    if(itemPhotos.length){
-      h+='<div class="photos-row">';
-      itemPhotos.forEach((src,pi)=>{h+='<img class="thumb" src="'+src+'" id="ip-'+i+'-'+pi+'">';});
-      h+='</div>';
-    }
-    h+='<div class="item-actions"><button class="snag-link" id="sl-'+i+'">+ log snag</button>'
-      +'<label class="photo-lbl">&#128247; photo<input type="file" accept="image/*" capture="environment" id="ipu-'+i+'" style="display:none"></label>'
-      +'</div></div>';
-  });
+
+  function sect(title,itemList,icon,bg){
+    if(!itemList.length)return'';
+    const done=itemList.filter(item=>gS(C,L,item)==='Signed Off').length;
+    const pct=itemList.length?Math.round(done/itemList.length*100):0;
+    let sh='<div style="background:'+bg+';border-radius:10px;padding:10px 12px;margin-bottom:10px">';
+    sh+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">';
+    sh+='<span style="font-size:13px;font-weight:600">'+icon+' '+title+'</span>';
+    sh+='<span style="font-size:11px;font-weight:600;color:'+(pct===100?'#34c759':'#636366')+'">'+done+'/'+itemList.length+'</span>';
+    sh+='</div>';
+    sh+='<div class="pb" style="margin-bottom:8px"><div class="pf '+(pct===100?'g':pct>0?'b':'')+'" style="width:'+pct+'%"></div></div>';
+    itemList.forEach(item=>{
+      const gi=its.indexOf(item);
+      const s=gS(C,L,item);
+      const ic=S.snags.filter(sn=>sn.c===C&&sn.l===L&&sn.i===item&&sn.st!=='Fixed'&&sn.st!=='Closed').length;
+      const iph=S.photos[pk(C,L,item)]||[];
+      sh+='<div class="item-card" style="margin-bottom:6px"><div class="item-name">'+e(item)+(ic>0?' <span style="color:#ff3b30;font-size:12px">('+ic+')</span>':'')+'</div>';
+      sh+='<div class="sbtns">';
+      SS.forEach(sv=>{sh+='<button class="'+(s===sv?scl(sv):'')+'" id="sb-'+gi+'-'+sv.replace(/[\s\u2014]+/g,'_')+'">'+sv+'</button>';});
+      sh+='</div>';
+      if(iph.length){sh+='<div class="photos-row">';iph.forEach((src,pi)=>{sh+='<img class="thumb" src="'+src+'" id="ip-'+gi+'-'+pi+'">';});sh+='</div>';}
+      sh+='<div class="item-actions"><button class="snag-link" id="sl-'+gi+'">+ log snag</button>'
+        +'<label class="photo-lbl">&#128247; photo<input type="file" accept="image/*" capture="environment" id="ipu-'+gi+'" style="display:none"></label>'
+        +'</div></div>';
+    });
+    sh+='</div>';
+    return sh;
+  }
+
+  if(grp.kitchen.length)h+=sect('Kitchen',grp.kitchen,'🍳','#f0fdf4');
+  bedNums.forEach(bn=>{h+=sect('Bed '+bn,grp.beds[bn],grp.beds[bn].some(i=>i.includes('Robe'))?'🚪':'🛏','#f0f7ff');});
+  if(grp.other.length)h+=sect('General',grp.other,'📦','#faf9f7');
   return h+'</div>';
 }
 
@@ -508,7 +552,9 @@ function vMis(){
   
   // Add misplaced item form
   h+='<div class="form-block"><h3>Log Misplaced Item</h3>'
-   +'<div class="ff"><label>Item Description</label><input type="text" id="mis-desc" placeholder="e.g. Corner Vanity Shelf, Coat Hook, Headboard…"></div>'
+   +'<div class="ff"><label>Item Type</label><select id="mis-desc"><option value="">Select item…</option>'
+   +['Kitchen Plinth','Red Splashback','Green Splashback','Coat Hooks','Island Back','Head Fillers','Plinth Vents','Black Edged Battens','Split Battens','TV Boxes','Corner Vanity','Corner Vanity Shelf','Bathroom IPS','Bathroom Vanity'].map(i=>'<option>'+i+'</option>').join('')
+   +'</select></div>'
    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
    +'<div class="ff"><label>Currently in Lodge</label><input type="text" id="mis-cur" placeholder="e.g. 544"></div>'
    +'<div class="ff"><label>Should be in Lodge (if known)</label><input type="text" id="mis-dest" placeholder="e.g. 567"></div>'
@@ -553,231 +599,67 @@ function vHb(){
    +'<div class="ff"><label>Lodge Number</label><input type="text" id="hb-srch" placeholder="e.g. 544 — shows all headboard pack status for this lodge"></div>'
    +'<div id="hb-results"></div></div>';
 
-  // Log headboard issue
-  h+='<div class="form-block"><h3>Log Headboard Issue</h3>'
-   +'<div class="ff"><label>Cluster</label><select id="hb-cl"><option value="">Select…</option>'
-   +cls.map(cl=>'<option>'+cl+'</option>').join('')
-   +'</select></div>'
+  const bdTypes=['Twin Left (socket)','Twin Middle (plain)','Twin Right (socket)','Double Left (plain)','Double Middle (socket)','Double Right (plain)'];
+  const bdOpts=bdTypes.map(t=>'<option>'+t+'</option>').join('');
+  h+='<div class="form-block"><h3>Log Spare Board</h3>'
+   +'<p style="font-size:12px;color:#8e8e93;margin-bottom:8px">Board found at wrong lodge or left over after completing a room.</p>'
    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
-   +'<div class="ff"><label>Lodge with Issue</label><input type="text" id="hb-lodge" placeholder="e.g. 544"></div>'
-   +'<div class="ff"><label>Room / Bed</label><input type="text" id="hb-room" placeholder="e.g. Bed 2 Twin"></div>'
+   +'<div class="ff"><label>Currently at Lodge</label><input type="text" id="hb-spare-lodge" placeholder="544"></div>'
+   +'<div class="ff"><label>Board Type</label><select id="hb-spare-type">'+bdOpts+'</select></div>'
    +'</div>'
-   +'<div class="ff"><label>Issue Type</label><select id="hb-type">'
-   +'<option>Missing board — taken by another lodge</option>'
-   +'<option>Wrong lodge — label error</option>'
-   +'<option>Damaged board</option>'
-   +'<option>Board in wrong room — wrong twin/double type</option>'
-   +'<option>Pack complete but mixed boards</option>'
-   +'</select></div>'
-   +'<div class="ff"><label>Taken by / Found in Lodge (if known)</label><input type="text" id="hb-other" placeholder="e.g. Lodge 567 used board from this pack"></div>'
-   +'<div class="ff"><label>Notes</label><textarea id="hb-note" placeholder="Describe the issue…"></textarea></div>'
-   +'<button class="sub-btn" id="hb-log-btn">Log Headboard Issue</button></div>';
+   +'<div class="ff"><label>Condition</label><select id="hb-spare-cond"><option>Good</option><option>Minor damage</option><option>Damaged</option></select></div>'
+   +'<div class="ff"><label>Notes</label><input type="text" id="hb-spare-note" placeholder="Any additional info…"></div>'
+   +'<button class="sub-btn" id="hb-spare-btn" style="background:#34c759">Log Spare Board</button></div>';
+  h+='<div class="form-block"><h3>Log Missing Board</h3>'
+   +'<p style="font-size:12px;color:#8e8e93;margin-bottom:8px">Room is missing a board and needs one sourced.</p>'
+   +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+   +'<div class="ff"><label>Lodge Needing Board</label><input type="text" id="hb-miss-lodge" placeholder="567"></div>'
+   +'<div class="ff"><label>Room</label><input type="text" id="hb-miss-room" placeholder="e.g. Bed 2 Twin"></div>'
+   +'</div>'
+   +'<div class="ff"><label>Board Type Needed</label><select id="hb-miss-type">'+bdOpts+'</select></div>'
+   +'<div class="ff"><label>Notes</label><input type="text" id="hb-miss-note" placeholder="e.g. board taken by Lodge 544"></div>'
+   +'<button class="sub-btn" id="hb-miss-btn" style="background:#ff3b30">Log Missing Board</button></div>';
 
   // Existing headboard issues
-  const hbList=Object.values(S.headboards).flat?Object.values(S.headboards):[];
-  const allHb=[];
-  Object.keys(S.headboards).forEach(k=>{
-    if(Array.isArray(S.headboards[k]))S.headboards[k].forEach(hb=>allHb.push(hb));
+  const spares=(S.headboards.spares||[]);
+  const missing=(S.headboards.missing||[]);
+  const unpairedSp=[...spares],unpairedMi=[...missing],paired=[];
+  missing.forEach(mis=>{
+    const mi=unpairedSp.findIndex(sp=>sp.boardType===mis.boardType&&sp.condition!=='Damaged');
+    if(mi>=0){paired.push({spare:unpairedSp[mi],miss:mis});unpairedSp.splice(mi,1);unpairedMi.splice(unpairedMi.indexOf(mis),1);}
   });
-  
-  if(allHb.length){
-    h+='<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#8e8e93;margin:14px 0 8px">Headboard Issues ('+allHb.length+')</div>';
-    allHb.forEach(hb=>{
-      h+='<div class="snag-card op">'
-       +'<div class="stags">'
-       +'<span class="stag stag-l">Lodge '+e(hb.lodge)+'</span>'
-       +(hb.room?'<span class="stag">'+e(hb.room)+'</span>':'')
-       +'<span class="stag" style="background:#ffeaea;color:#c80000">'+e(hb.issueType)+'</span>'
-       +'</div>'
-       +(hb.note?'<div class="snote">'+e(hb.note)+'</div>':'')
-       +(hb.otherLodge?'<div style="font-size:12px;color:#636366;margin-bottom:6px">Related lodge: '+e(hb.otherLodge)+'</div>':'')
-       +'<div class="sfoot"><span class="sdate">'+hb.date+'</span>'
-       +'<button class="del-btn" id="hb-del-'+hb.id+'">🗑</button>'
-       +'</div></div>';
+  if(paired.length){
+    h+='<div style="background:#eafaea;border-radius:10px;padding:12px 14px;margin-bottom:10px">';
+    h+='<div style="font-size:12px;font-weight:600;color:#1a7030;margin-bottom:8px">✓ '+paired.length+' Match'+(paired.length!==1?'es':'')+' — Ready to Relocate</div>';
+    paired.forEach(pr=>{
+      h+='<div style="background:#fff;border-radius:8px;padding:8px 12px;margin-bottom:5px;border:1px solid #34c759;display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+       +'<span style="font-size:11px;background:#f2f2f7;padding:2px 7px;border-radius:4px">'+e(pr.spare.boardType)+'</span>'
+       +'<strong style="color:#34c759">Lodge '+e(pr.spare.lodge)+'</strong>'
+       +'<span style="font-size:18px">→</span>'
+       +'<strong style="color:#ff3b30">Lodge '+e(pr.miss.lodge)+'</strong>'
+       +(pr.miss.room?'<span style="font-size:12px;color:#8e8e93">'+e(pr.miss.room)+'</span>':'')
+       +'</div>';
     });
-  } else {
-    h+='<div class="empty">No headboard issues logged</div>';
+    h+='</div>';
   }
-  return h+'</div>';
-}
-
-function bind(){
-  const $=id=>document.getElementById(id);
-  const cls=Object.keys(PD).sort();
-  if($('n-cl'))$('n-cl').onclick=()=>{V='cl';render();};
-  if($('n-log'))$('n-log').onclick=()=>{V='log';FL='all';render();};
-  if($('n-rep'))$('n-rep').onclick=()=>{V='rep';render();};
-  if($('n-add'))$('n-add').onclick=()=>{V='add';PF=null;render();};
-  if($('n-mis'))$('n-mis').onclick=()=>{V='mis';render();};
-  if($('n-hb'))$('n-hb').onclick=()=>{V='hb';render();};
-
-  // Misplaced items bind
-  if($('mis-log-btn'))$('mis-log-btn').onclick=()=>{
-    const item=$('mis-desc').value.trim();
-    const curLodge=$('mis-cur').value.trim();
-    const destLodge=$('mis-dest').value.trim();
-    const cluster=$('mis-cl').value;
-    const condition=$('mis-cond').value;
-    if(!item||!curLodge){toast('Enter item description and current lodge');return;}
-    S.misplaced.push({id:S.nid++,item,curLodge,destLodge,cluster,condition,date:today()});
-    sched();toast('Misplaced item logged ✓');render();
-  };
-  S.misplaced.forEach(mi=>{
-    const db=$('mis-del-'+mi.id);
-    if(db)db.onclick=()=>{if(!confirm('Remove?'))return;S.misplaced=S.misplaced.filter(x=>x.id!==mi.id);sched();render();};
-  });
-
-  // Misplaced search
-  const msr=$('mis-srch');
-  if(msr)msr.oninput=function(){
-    const q=this.value.trim().toLowerCase();
-    const res=$('mis-results');
-    if(!res)return;
-    if(!q){res.innerHTML='';return;}
-    // Find lodges where this item type hasn't been delivered yet
-    const matches=[];
-    Object.keys(PD).sort().forEach(cl=>{
-      Object.keys(PD[cl]).sort((a,b)=>+a-+b).forEach(lodge=>{
-        PD[cl][lodge].i.forEach(item=>{
-          if(item.toLowerCase().includes(q)){
-            const st=gS(cl,lodge,item)||'';
-            if(!['Delivered','Installed — Snagged','Installed','Signed Off'].includes(st)){
-              matches.push({cl,lodge,item,st:st||'Not started'});
-            }
-          }
-        });
-      });
-    });
-    if(!matches.length){res.innerHTML='<div class="empty">All lodges have this item delivered or no matching items found</div>';return;}
-    res.innerHTML='<div style="font-size:12px;color:#636366;margin:8px 0">'+matches.length+' location'+(matches.length!==1?'s':'')+' where this item is not yet delivered:</div>'
-      +matches.slice(0,30).map(m=>'<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:#fff;border-radius:8px;margin-bottom:4px;border:1px solid #e5e5ea">'
-        +'<span><strong>Lodge '+m.lodge+'</strong> <span style="color:#8e8e93;font-size:12px">'+m.cl+'</span></span>'
-        +'<span style="font-size:12px;color:#8e8e93">'+m.item+'</span>'
-        +'<span style="font-size:11px;background:#f2f2f7;padding:2px 7px;border-radius:5px">'+m.st+'</span>'
-        +'</div>').join('')
-      +(matches.length>30?'<div style="font-size:12px;color:#8e8e93;padding:4px 8px">...and '+(matches.length-30)+' more</div>':'');
-  };
-
-  // Headboard bind
-  if($('hb-log-btn'))$('hb-log-btn').onclick=()=>{
-    const lodge=$('hb-lodge').value.trim();
-    const room=$('hb-room').value.trim();
-    const issueType=$('hb-type').value;
-    const otherLodge=$('hb-other').value.trim();
-    const note=$('hb-note').value.trim();
-    const cluster=$('hb-cl').value;
-    if(!lodge){toast('Enter lodge number');return;}
-    if(!S.headboards[lodge])S.headboards[lodge]=[];
-    S.headboards[lodge].push({id:S.nid++,lodge,room,issueType,otherLodge,note,cluster,date:today()});
-    sched();toast('Headboard issue logged ✓');render();
-  };
-  Object.keys(S.headboards).forEach(k=>{
-    (S.headboards[k]||[]).forEach(hb=>{
-      const db=$('hb-del-'+hb.id);
-      if(db)db.onclick=()=>{S.headboards[k]=S.headboards[k].filter(x=>x.id!==hb.id);sched();render();};
-    });
-  });
-
-  // Headboard search
-  const hsr=$('hb-srch');
-  if(hsr)hsr.oninput=function(){
-    const q=this.value.trim();
-    const res=$('hb-results');
-    if(!res||!q)return;
-    const issues=[];
-    Object.keys(S.headboards).forEach(k=>{
-      (S.headboards[k]||[]).forEach(hb=>{
-        if(hb.lodge.includes(q)||hb.otherLodge?.includes(q))issues.push(hb);
-      });
-    });
-    if(!issues.length){res.innerHTML='<div style="font-size:13px;color:#8e8e93;padding:8px">No headboard issues logged for lodge '+q+'</div>';return;}
-    res.innerHTML=issues.map(hb=>'<div style="background:#fff;border-radius:8px;padding:10px 12px;margin-top:6px;border:1px solid #e5e5ea">'
-      +'<div style="font-weight:600;margin-bottom:4px">'+e(hb.issueType)+'</div>'
-      +(hb.room?'<div style="font-size:12px;color:#636366">Room: '+e(hb.room)+'</div>':'')
-      +(hb.otherLodge?'<div style="font-size:12px;color:#636366">Related: Lodge '+e(hb.otherLodge)+'</div>':'')
-      +(hb.note?'<div style="font-size:13px;margin-top:4px">'+e(hb.note)+'</div>':'')
-      +'<div style="font-size:11px;color:#8e8e93;margin-top:4px">'+hb.date+'</div>'
-      +'</div>').join('');
-  };
-  if($('back-cl'))$('back-cl').onclick=()=>{V='cl';render();};
-  if($('back-lo'))$('back-lo').onclick=()=>{V='lo';render();};
-  if($('add-cl'))$('add-cl').onclick=()=>{PF={c:C,l:'',i:''};V='add';render();};
-  if($('add-lo'))$('add-lo').onclick=()=>{PF={c:C,l:L,i:''};V='add';render();};
-  if($('rfbtn'))$('rfbtn').onclick=async()=>{$('rfbtn').textContent='Refreshing…';await readBin();render();toast('Refreshed ✓');};
-  cls.forEach((c,i)=>{const b=$('cl-'+i);if(b)b.onclick=()=>{C=c;V='lo';render();};});
-  if(V==='lo')Object.keys(PD[C]).sort((a,b)=>+a-+b).forEach((l,i)=>{const b=$('lo-'+i);if(b)b.onclick=()=>{L=l;V='it';render();};});
-  if(V==='it'){
-    PD[C][L].i.forEach((item,i)=>{
-      SS.forEach(sv=>{const b=$('sb-'+i+'-'+sv.replace(/\s+/g,'_'));if(b)b.onclick=()=>{const cur=gS(C,L,item);sS(C,L,item,cur===sv?'':sv);render();};});
-      const sl=$('sl-'+i);if(sl)sl.onclick=()=>{PF={c:C,l:L,i:item};V='add';render();};
-      const ipu=$('ipu-'+i);
-      if(ipu)ipu.onchange=async function(){
-        if(!this.files.length)return;
-        toast('Saving photo…');
-        const key=pk(C,L,item);
-        if(!S.photos[key])S.photos[key]=[];
-        for(const f of this.files){S.photos[key].push(await compressImage(f));}
-        sched();render();toast('Photo saved ✓');
-      };
-      const itemPhotos=S.photos[pk(C,L,item)]||[];
-      itemPhotos.forEach((_,pi)=>{const img=$('ip-'+i+'-'+pi);if(img)img.onclick=()=>openLB(img.src);});
+  if(unpairedMi.length){
+    h+='<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#ff3b30;margin:10px 0 6px">Missing ('+unpairedMi.length+') — No Match Yet</div>';
+    unpairedMi.forEach(mi=>{
+      h+='<div class="snag-card op"><div class="stags"><span class="stag stag-l">Lodge '+e(mi.lodge)+'</span>'
+       +(mi.room?'<span class="stag">'+e(mi.room)+'</span>':'')
+       +'<span class="stag" style="background:#ffeaea;color:#c80000">'+e(mi.boardType)+'</span></div>'
+       +(mi.note?'<div class="snote">'+e(mi.note)+'</div>':'')
+       +'<div class="sfoot"><span class="sdate">'+mi.date+'</span><button class="del-btn" id="hbm-del-'+mi.id+'">&#128465;</button></div></div>';
     });
   }
-  ['all','Open','In Progress','Awaiting Factory','Fixed','Closed'].forEach(f=>{const b=$('f-'+f.replace(/\s+/g,'_'));if(b)b.onclick=()=>{FL=f;render();};});
-  S.snags.forEach(s=>{
-    const sel=$('ss-'+s.id);if(sel)sel.onchange=function(){s.st=this.value;sched();render();};
-    const db=$('sd-'+s.id);if(db)db.onclick=()=>{if(!confirm('Delete this snag?'))return;S.snags=S.snags.filter(x=>x.id!==s.id);sched();render();};
-    const photos=s.photos||[];
-    photos.forEach((_,pi)=>{const img=$('sp-'+s.id+'-'+pi);if(img)img.onclick=()=>openLB(img.src);});
-  });
-  const faC=$('fa-c');if(faC)faC.onchange=function(){PF={c:this.value,l:'',i:''};render();};
-  const faL=$('fa-l');if(faL)faL.onchange=function(){PF={c:$('fa-c').value,l:this.value,i:''};render();};
-  const faPhoto=$('fa-photo');
-  if(faPhoto)faPhoto.onchange=async function(){
-    if(!this.files.length)return;
-    toast('Compressing…');
-    for(const f of this.files){pendingPhotos.push(await compressImage(f));}
-    renderPhotoPreview();toast('Photo ready ✓');
-  };
-  const lb=$('log-btn');
-  if(lb)lb.onclick=()=>{
-    const c=$('fa-c').value,l=$('fa-l').value,i=$('fa-i').value;
-    const n=$('fa-n').value.trim(),d=$('fa-d').value||today(),st=$('fa-s').value;
-    const err=$('fa-err');
-    if(!c||!l||!n){err.style.display='block';err.textContent='Please fill in Cluster, Lodge and Description.';return;}
-    err.style.display='none';
-    S.snags.push({id:S.nid++,c,l,i,note:n,d,st,photos:[...pendingPhotos]});
-    if(i){const cs=gS(c,l,i);if(!cs||cs==='Installed')sS(c,l,i,'Installed - Snagged');}
-    pendingPhotos=[];sched();toast('Snag logged ✓');$('fa-n').value='';PF={c,l,i:''};
-  };
-  if($('print-btn'))$('print-btn').onclick=()=>window.print();
-
-  // Report cluster selector
-  const cls_list=Object.keys(PD).sort();
-  cls_list.forEach(cl=>{
-    const btn=$('rclbtn-'+cl.replace(/\s+/g,'_'));
-    if(btn)btn.onclick=()=>{
-      if(!window._repClusters)window._repClusters=[...cls_list];
-      const idx=window._repClusters.indexOf(cl);
-      if(idx>=0)window._repClusters.splice(idx,1);
-      else window._repClusters.push(cl);
-      render();
-    };
-  });
-  const raBtn=$('rep-all-btn');
-  if(raBtn)raBtn.onclick=()=>{window._repClusters=[...cls_list];render();};
-  const rnBtn=$('rep-none-btn');
-  if(rnBtn)rnBtn.onclick=()=>{window._repClusters=[];render();};
-  if($('excel-btn'))$('excel-btn').onclick=()=>exportExcel();
-  if($('copy-btn'))$('copy-btn').onclick=()=>{
-    const op=S.snags.filter(s=>['Open','In Progress','Awaiting Factory'].includes(s.st));
-    if(!op.length){toast('No open snags');return;}
-    const txt='Factory Report - '+today()+'\n\n'+op.map(s=>'Lodge '+s.l+' ('+s.c+')'+(s.i?' | '+s.i:'')+'\n'+s.note+'\n'+s.d+' | '+s.st).join('\n\n');
-    if(navigator.clipboard)navigator.clipboard.writeText(txt).then(()=>toast('Copied ✓'));
-  };
-}
-
-readBin().then(()=>render());
-</script>
-</body>
-</html>
+  if(unpairedSp.length){
+    h+='<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#34c759;margin:10px 0 6px">Spares ('+unpairedSp.length+') — Available</div>';
+    unpairedSp.forEach(sp=>{
+      h+='<div class="snag-card fx"><div class="stags"><span class="stag stag-l">Lodge '+e(sp.lodge)+'</span>'
+       +'<span class="stag" style="background:#eafaea;color:#1a7030">'+e(sp.boardType)+'</span>'
+       +'<span class="stag">'+e(sp.condition)+'</span></div>'
+       +(sp.note?'<div style="font-size:12px;color:#636366;margin-bottom:4px">'+e(sp.note)+'</div>':'')
+       +'<div class="sfoot"><span class="sdate">'+sp.date+'</span><button class="del-btn" id="hbs-del-'+sp.id+'">&#128465;</button></div></div>';
+    });
+  }
+  >
