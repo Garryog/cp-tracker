@@ -96,7 +96,7 @@ button{font-family:inherit;cursor:pointer;-webkit-appearance:none}
 <body>
 <div id="app"><div class="loading"><div class="spin"></div><div>Loading&hellip;</div></div></div>
 <div class="lightbox" id="lightbox"><button class="lb-close" id="lb-close">&times;</button><img id="lb-img" src="" alt=""></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <script>
 const BEAM_ALL=["Splashback", "MDF Head Filler — Kitchen", "MDF Head Filler — Wardrobe", "Corner Vanity Shelf", "Coat Hook × 4", "Wardrobe Plinth", "Kitchen Plinth — Aluminium"];
 const BEAM_NO_SPLASH=["MDF Head Filler — Kitchen", "MDF Head Filler — Wardrobe", "Corner Vanity Shelf", "Coat Hook × 4", "Wardrobe Plinth", "Kitchen Plinth — Aluminium"];
@@ -275,25 +275,20 @@ function nav(on){
 
 function vCl(){
   const cls=Object.keys(PD).sort();
-  let ti=0,td=0,tos=0;
-  cls.forEach(c=>Object.keys(PD[c]).forEach(l=>{PD[c][l].i.forEach(i=>{ti++;if(gS(c,l,i)==='Finished')td++;});tos+=oS(c,l);}));
-  const pct=ti?Math.round(td/ti*100):0;
-  const tl=Object.values(PD).reduce((a,c)=>a+Object.keys(c).length,0);
+  const tl=Object.values(PD).reduce((a,cl)=>a+Object.keys(cl).length,0);
   let h=nav('cl')+'<div class="page"><div class="stats">'
     +'<div class="stat"><div class="stat-n" style="color:#007aff">'+tl+'</div><div class="stat-l">Lodges</div></div>'
-    +'<div class="stat"><div class="stat-n" style="color:#34c759">'+pct+'%</div><div class="stat-l">Complete</div></div>'
-    +'<div class="stat"><div class="stat-n" style="color:#ff9500">'+td+'</div><div class="stat-l">Done</div></div>'
-    +'<div class="stat"><div class="stat-n" style="color:#ff3b30">'+tos+'</div><div class="stat-l">Snags</div></div>'
+    +'<div class="stat"><div class="stat-n" style="color:#ff3b30">'+S.snags.filter(s=>s.st==='Open'||s.st==="In Progress").length+'</div><div class="stat-l">Open Snags</div></div>'
+    +'<div class="stat"><div class="stat-n" style="color:#ff9500">'+S.misplaced.length+'</div><div class="stat-l">Misplaced</div></div>'
+    +'<div class="stat"><div class="stat-n" style="color:#34c759">'+((S.headboards.spares||[]).length)+'</div><div class="stat-l">Spare Boards</div></div>'
     +'</div>';
-  cls.forEach((c,i)=>{
-    const ls=Object.keys(PD[c]);let cd=0,ct=0,cs=0;
-    ls.forEach(l=>{const p=prog(c,l);cd+=p.d;ct+=p.t;cs+=oS(c,l);});
-    const cp=ct?Math.round(cd/ct*100):0;
+  cls.forEach((cl,i)=>{
+    const lodgeCount=Object.keys(PD[cl]).length;
+    const openSnags=S.snags.filter(s=>s.c===cl&&(s.st==='Open'||s.st==="In Progress")).length;
     h+='<button class="row-btn" id="cl-'+i+'">'
-      +'<div class="row-head"><span class="row-title">'+e(c)+'</span>'
-      +'<span class="row-meta">'+(cs>0?'<span class="row-snag">'+cs+'</span>':'')+ls.length+' &rsaquo;</span></div>'
-      +'<div class="pn"><span>'+cd+'/'+ct+'</span><span>'+cp+'%</span></div>'
-      +'<div class="pb"><div class="pf '+(cp===100?'g':cp>0?'b':'')+'" style="width:'+cp+'%"></div></div></button>';
+      +'<div class="row-head"><span class="row-title">'+e(cl)+'</span>'
+      +'<span class="row-meta">'+(openSnags>0?'<span class="row-snag">'+openSnags+'</span>':'')+lodgeCount+' lodges &rsaquo;</span></div>'
+      +'</button>';
   });
   return h+'</div>';
 }
@@ -310,32 +305,6 @@ function vLo(){
       +'<div class="pb"><div class="pf '+(p.p===100?'g':p.p>0?'b':'')+'" style="width:'+p.p+'%"></div></div></button>';
   });
   return h+'</div>';
-}
-
-function groupItems(its){
-  const kitKeys=['Kitchen \u2014','Splashback','MDF Head Filler \u2014 Kitchen','Kitchen Plinth','Appliance Installation'];
-  let kitchen=[],beds={},other=[];
-  its.forEach(item=>{
-    if(kitKeys.some(k=>item.includes(k))){kitchen.push(item);}
-    else if(item.startsWith('Bed ')){
-      const p=item.split(' ');
-      if(p.length>1&&!isNaN(+p[1])){const bn=+p[1];if(!beds[bn])beds[bn]=[];beds[bn].push(item);}
-      else other.push(item);
-    } else other.push(item);
-  });
-  const cvs=other.indexOf('Corner Vanity Shelf');
-  if(cvs>=0){
-    const cvBed=Object.keys(beds).map(Number).sort().find(bn=>beds[bn].some(i=>i.includes('Corner Vanity')&&!i.includes('Shelf')));
-    if(cvBed!==undefined){beds[cvBed].push('Corner Vanity Shelf');other.splice(cvs,1);}
-  }
-  ['Wardrobe Plinth','MDF Head Filler \u2014 Wardrobe'].forEach(key=>{
-    const idx2=other.findIndex(i=>i.includes(key));
-    if(idx2<0)return;
-    const robeBeds=Object.keys(beds).map(Number).filter(bn=>beds[bn].some(i=>i.includes('Robe')));
-    const target=robeBeds.length?Math.max(...robeBeds):(Object.keys(beds).length?Math.max(...Object.keys(beds).map(Number)):null);
-    if(target!==null){beds[target].push(other[idx2]);other.splice(idx2,1);}
-  });
-  return{kitchen,beds,other};
 }
 
 function vIt(){
@@ -667,4 +636,205 @@ function vHb(){
        +'<div class="sfoot"><span class="sdate">'+sp.date+'</span><button class="del-btn" id="hbs-del-'+sp.id+'">&#128465;</button></div></div>';
     });
   }
-  >
+  
+  if(!spares.length&&!missing.length)h+='<div class="empty">No headboard spares or missing boards logged</div>';
+  return h+'</div>';
+}
+
+function bind(){
+  const $=id=>document.getElementById(id);
+  const cls=Object.keys(PD).sort();
+  if($('n-cl'))$('n-cl').onclick=()=>{V='cl';render();};
+  if($('n-log'))$('n-log').onclick=()=>{V='log';FL='all';render();};
+  if($('n-rep'))$('n-rep').onclick=()=>{V='rep';render();};
+  if($('n-add'))$('n-add').onclick=()=>{V='add';PF=null;render();};
+  if($('n-mis'))$('n-mis').onclick=()=>{V='mis';render();};
+  if($('n-hb'))$('n-hb').onclick=()=>{V='hb';render();};
+  if($('back-cl'))$('back-cl').onclick=()=>{V='cl';render();};
+  if($('back-lo'))$('back-lo').onclick=()=>{V='lo';render();};
+  if($('add-cl'))$('add-cl').onclick=()=>{PF={c:C,l:'',i:''};V='add';render();};
+  if($('add-lo'))$('add-lo').onclick=()=>{PF={c:C,l:L,i:''};V='add';render();};
+  if($('rfbtn'))$('rfbtn').onclick=async()=>{$('rfbtn').textContent='Refreshing…';await readBin();render();toast('Refreshed ✓');};
+
+  // Cluster list buttons
+  Object.keys(PD).sort().forEach((cl,i)=>{const b=$('cl-'+i);if(b)b.onclick=()=>{C=cl;V='lo';render();};});
+
+  // Lodge list buttons
+  if(V==='lo')Object.keys(PD[C]).sort((a,b)=>+a-+b).forEach((l,i)=>{const b=$('lo-'+i);if(b)b.onclick=()=>{L=l;V='it';render();};});
+
+  // Item status buttons and photos
+  if(V==='it'){
+    PD[C][L].i.concat(beamItems(C)).forEach((item,i)=>{
+      // Use index in full lodgeItems array for button IDs
+      const gi=lodgeItems(C,L).indexOf(item);
+      SS.forEach(sv=>{
+        const b=$('sb-'+gi+'-'+sv.replace(/[\s—]+/g,'_'));
+        if(b)b.onclick=()=>{const cur=gS(C,L,item);sS(C,L,item,cur===sv?'':sv);render();};
+      });
+      const sl=$('sl-'+gi);if(sl)sl.onclick=()=>{PF={c:C,l:L,i:item};V='add';render();};
+      const ipu=$('ipu-'+gi);
+      if(ipu)ipu.onchange=async function(){
+        if(!this.files.length)return;
+        toast('Saving photo…');
+        const key=pk(C,L,item);
+        if(!S.photos[key])S.photos[key]=[];
+        for(const f of this.files){S.photos[key].push(await compressImage(f));}
+        sched();render();toast('Photo saved ✓');
+      };
+      const iph=S.photos[pk(C,L,item)]||[];
+      iph.forEach((_,pi)=>{const img=$('ip-'+gi+'-'+pi);if(img)img.onclick=()=>openLB(img.src);});
+    });
+  }
+
+  // Snag log filter chips
+  ['all','Open','In Progress','Awaiting Factory','Fixed','Closed'].forEach(f=>{
+    const b=$('f-'+f.replace(/\s+/g,'_'));if(b)b.onclick=()=>{FL=f;render();};
+  });
+
+  // Snag actions
+  S.snags.forEach(s=>{
+    const sel=$('ss-'+s.id);if(sel)sel.onchange=function(){s.st=this.value;sched();render();};
+    const db=$('sd-'+s.id);if(db)db.onclick=()=>{if(!confirm('Delete this snag?'))return;S.snags=S.snags.filter(x=>x.id!==s.id);sched();render();};
+    const photos=s.photos||[];
+    photos.forEach((_,pi)=>{const img=$('sp-'+s.id+'-'+pi);if(img)img.onclick=()=>openLB(img.src);});
+  });
+
+  // Snag add form
+  const faC=$('fa-c');if(faC)faC.onchange=function(){PF={c:this.value,l:'',i:''};render();};
+  const faL=$('fa-l');if(faL)faL.onchange=function(){PF={c:$('fa-c').value,l:this.value,i:''};render();};
+  const faPhoto=$('fa-photo');
+  if(faPhoto)faPhoto.onchange=async function(){
+    if(!this.files.length)return;
+    toast('Compressing…');
+    for(const f of this.files){pendingPhotos.push(await compressImage(f));}
+    renderPhotoPreview();toast('Photo ready ✓');
+  };
+  const lb=$('log-btn');
+  if(lb)lb.onclick=()=>{
+    const c=$('fa-c').value,l=$('fa-l').value,i=$('fa-i').value;
+    const n=$('fa-n').value.trim(),d=$('fa-d').value||today(),st=$('fa-s').value;
+    const err=$('fa-err');
+    if(!c||!l||!n){err.style.display='block';err.textContent='Please fill in Cluster, Lodge and Description.';return;}
+    err.style.display='none';
+    S.snags.push({id:S.nid++,c,l,i,note:n,d,st,photos:[...pendingPhotos]});
+    if(i){const cs=gS(c,l,i);if(!cs||cs==='Installed')sS(c,l,i,'Installed — Snagged');}
+    pendingPhotos=[];sched();toast('Snag logged ✓');$('fa-n').value='';PF={c,l,i:''};
+  };
+
+  // Report buttons
+  if($('print-btn'))$('print-btn').onclick=()=>window.print();
+  if($('excel-btn'))$('excel-btn').onclick=()=>exportExcel();
+  if($('copy-btn'))$('copy-btn').onclick=()=>{
+    const op=S.snags.filter(s=>['Open','In Progress','Awaiting Factory'].includes(s.st));
+    if(!op.length){toast('No open snags');return;}
+    const txt='CP Tracker Report - '+today()+'\\n\\n'+op.map(s=>'Lodge '+s.l+' ('+s.c+')'+(s.i?' | '+s.i:'')+'\\n'+s.note+'\\n'+s.d+' | '+s.st).join('\\n\\n');
+    if(navigator.clipboard)navigator.clipboard.writeText(txt).then(()=>toast('Copied ✓'));
+  };
+
+  // Report cluster selector
+  cls.forEach(cl=>{
+    const btn=$('rclbtn-'+cl.replace(/\s+/g,'_'));
+    if(btn)btn.onclick=()=>{
+      if(!window._repClusters)window._repClusters=[...cls];
+      const idx=window._repClusters.indexOf(cl);
+      if(idx>=0)window._repClusters.splice(idx,1);
+      else window._repClusters.push(cl);
+      render();
+    };
+  });
+  const raBtn=$('rep-all-btn');if(raBtn)raBtn.onclick=()=>{window._repClusters=[...cls];render();};
+  const rnBtn=$('rep-none-btn');if(rnBtn)rnBtn.onclick=()=>{window._repClusters=[];render();};
+
+  // Misplaced items
+  if($('mis-log-btn'))$('mis-log-btn').onclick=()=>{
+    const item=$('mis-desc').value;
+    const curLodge=$('mis-cur').value.trim();
+    const destLodge=$('mis-dest').value.trim();
+    const cluster=$('mis-cl').value;
+    const condition=$('mis-cond').value;
+    if(!item||!curLodge){toast('Select item type and enter current lodge');return;}
+    S.misplaced.push({id:S.nid++,item,curLodge,destLodge,cluster,condition,date:today()});
+    sched();toast('Misplaced item logged ✓');render();
+  };
+  S.misplaced.forEach(mi=>{
+    const db=$('mis-del-'+mi.id);
+    if(db)db.onclick=()=>{if(!confirm('Remove?'))return;S.misplaced=S.misplaced.filter(x=>x.id!==mi.id);sched();render();};
+  });
+  // Misplaced search
+  const msr=$('mis-srch');
+  if(msr)msr.oninput=function(){
+    const q=this.value.trim().toLowerCase();
+    const res=$('mis-results');if(!res)return;
+    if(!q){res.innerHTML='';return;}
+    const matches=[];
+    Object.keys(PD).sort().forEach(cl=>{
+      Object.keys(PD[cl]).sort((a,b)=>+a-+b).forEach(lodge=>{
+        lodgeItems(cl,lodge).forEach(item=>{
+          if(item.toLowerCase().includes(q)){
+            const st=gS(cl,lodge,item)||'';
+            if(!['Delivered','Installed — Snagged','Installed','Signed Off'].includes(st)){
+              matches.push({cl,lodge,item,st:st||'Not started'});
+            }
+          }
+        });
+      });
+    });
+    if(!matches.length){res.innerHTML='<div class="empty">No matching locations found</div>';return;}
+    res.innerHTML='<div style="font-size:12px;color:#636366;margin:8px 0">'+matches.length+' location'+(matches.length!==1?'s':'')+' where this item is not yet delivered:</div>'
+      +matches.slice(0,30).map(m=>'<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:#fff;border-radius:8px;margin-bottom:4px;border:1px solid #e5e5ea">'
+        +'<span><strong>Lodge '+m.lodge+'</strong> <span style="color:#8e8e93;font-size:12px">'+m.cl+'</span></span>'
+        +'<span style="font-size:11px;background:#f2f2f7;padding:2px 7px;border-radius:5px">'+m.st+'</span>'
+        +'</div>').join('')
+      +(matches.length>30?'<div style="font-size:12px;color:#8e8e93;padding:4px 8px">...and '+(matches.length-30)+' more</div>':'');
+  };
+
+  // Headboard binds
+  if($('hb-spare-btn'))$('hb-spare-btn').onclick=()=>{
+    const lodge=$('hb-spare-lodge').value.trim();
+    if(!lodge){toast('Enter lodge number');return;}
+    if(!S.headboards.spares)S.headboards.spares=[];
+    S.headboards.spares.push({id:S.nid++,lodge,boardType:$('hb-spare-type').value,condition:$('hb-spare-cond').value,note:$('hb-spare-note').value.trim(),date:today()});
+    sched();toast('Spare board logged ✓');render();
+  };
+  if($('hb-miss-btn'))$('hb-miss-btn').onclick=()=>{
+    const lodge=$('hb-miss-lodge').value.trim();
+    if(!lodge){toast('Enter lodge number');return;}
+    if(!S.headboards.missing)S.headboards.missing=[];
+    S.headboards.missing.push({id:S.nid++,lodge,room:$('hb-miss-room').value.trim(),boardType:$('hb-miss-type').value,note:$('hb-miss-note').value.trim(),date:today()});
+    sched();toast('Missing board logged ✓');render();
+  };
+  (S.headboards.spares||[]).forEach(sp=>{
+    const db=$('hbs-del-'+sp.id);
+    if(db)db.onclick=()=>{S.headboards.spares=S.headboards.spares.filter(x=>x.id!==sp.id);sched();render();};
+  });
+  (S.headboards.missing||[]).forEach(mi=>{
+    const db=$('hbm-del-'+mi.id);
+    if(db)db.onclick=()=>{S.headboards.missing=S.headboards.missing.filter(x=>x.id!==mi.id);sched();render();};
+  });
+  // Headboard search
+  const hsr=$('hb-srch');
+  if(hsr)hsr.oninput=function(){
+    const q=this.value.trim();
+    const res=$('hb-results');if(!res||!q)return;
+    const all=[...(S.headboards.spares||[]),...(S.headboards.missing||[])];
+    const issues=all.filter(h=>h.lodge.includes(q)||(h.otherLodge||'').includes(q));
+    if(!issues.length){res.innerHTML='<div style="font-size:13px;color:#8e8e93;padding:8px">No issues logged for lodge '+e(q)+'</div>';return;}
+    res.innerHTML=issues.map(h=>'<div style="background:#fff;border-radius:8px;padding:10px 12px;margin-top:6px;border:1px solid #e5e5ea">'
+      +'<div style="font-weight:600;margin-bottom:4px">'+e(h.boardType||'')+'</div>'
+      +(h.room?'<div style="font-size:12px;color:#636366">Room: '+e(h.room)+'</div>':'')
+      +(h.note?'<div style="font-size:13px;margin-top:4px">'+e(h.note)+'</div>':'')
+      +'<div style="font-size:11px;color:#8e8e93;margin-top:4px">'+h.date+'</div>'
+      +'</div>').join('');
+  };
+
+  // Lightbox
+  document.getElementById('lb-close').onclick=()=>document.getElementById('lightbox').classList.remove('open');
+  document.getElementById('lightbox').onclick=function(e){if(e.target===this)this.classList.remove('open');};
+}
+
+// Show UI immediately, then load Supabase data
+render();
+readBin().then(()=>render());
+</script>
+</body>
+</html>
