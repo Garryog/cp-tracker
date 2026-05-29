@@ -62,24 +62,12 @@ async function readBin(){
 async function writeBin(){
   setSS('s');
   try{
-    // Only merge the st field - fetch server st and apply our dirty keys on top
-    if(dirtyKeys.size>0){
-      const r=await fetch(SUPA_URL+'/cp_tracker?id=eq.main',{headers:SUPA_HDR});
-      const d=await r.json();
-      if(d&&d[0]){
-        // Start from server's st, apply only local changes on top
-        const serverSt=d[0].st||{};
-        dirtyKeys.forEach(k=>{serverSt[k]=S.st[k];});
-        S.st=serverSt;
-      }
-    }
-    dirtyKeys.clear();
     const body={st:S.st,snags:S.snags,nid:S.nid,photos:S.photos,misplaced:S.misplaced,headboards:S.headboards};
     await fetch(SUPA_URL+'/cp_tracker?id=eq.main',{
-      method:'PATCH',
-      headers:SUPA_WRITE_HDR,
+      method:'PATCH',headers:SUPA_WRITE_HDR,
       body:JSON.stringify(body)
     });
+    dirtyKeys.clear();
     setSS('ok');
   }catch(e){setSS('e');console.log('write',e);}
 }
@@ -516,15 +504,7 @@ function bind(){
   if($('back-lo'))$('back-lo').onclick=()=>{V='lo';render();};
   if($('add-cl'))$('add-cl').onclick=()=>{PF={c:C,l:'',i:''};V='add';render();};
   if($('add-lo'))$('add-lo').onclick=()=>{PF={c:C,l:L,i:''};V='add';render();};
-  if($('rfbtn'))$('rfbtn').onclick=async()=>{
-    $('rfbtn').textContent='Saving…';
-    clearTimeout(saveT); // cancel pending timer
-    if(dirtyKeys.size>0)await writeBin(); // flush pending saves first
-    $('rfbtn').textContent='Refreshing…';
-    await readBin();
-    render();
-    toast('Refreshed ✓');
-  };
+  if($('rfbtn'))$('rfbtn').onclick=async()=>{$('rfbtn').textContent='Refreshing…';await readBin();render();toast('Refreshed ✓');};
 
   // Cluster list buttons
   Object.keys(PD).sort().forEach((cl,i)=>{const b=$('cl-'+i);if(b)b.onclick=()=>{C=cl;V='lo';render();};});
