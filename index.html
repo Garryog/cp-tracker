@@ -24,7 +24,7 @@ const _PD={"Cluster 01":{"573":{"n":"6BW","i":[1,2,3,6,9,11,13,15,16,20,22,23,24
 const PD={};
 Object.keys(_PD).forEach(cl=>{PD[cl]={};Object.keys(_PD[cl]).forEach(l=>{PD[cl][l]={n:_PD[cl][l].n,i:_PD[cl][l].i.map(x=>IL[x])};});});
 
-const SS=['Left Factory','Delivered','Installed — Snagged','Installed','Signed Off'];
+const SS=['Left Factory','Delivered','Installed — Snagged','Installed'];
 const NS=['Open','In Progress','Awaiting Factory','Fixed','Closed'];
 const SUPA_URL='https://klyropbsupqfmtjjwlfa.supabase.co/rest/v1';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtseXJvcGJzdXBxZm10amp3bGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNjY4MDEsImV4cCI6MjA5NDg0MjgwMX0.VuP5mnSgNhzoIdx7t3R7mgt2tyLZVtElUihei3xgC5Q';
@@ -32,7 +32,8 @@ const SUPA_HDR={'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Ty
 const SUPA_WRITE_HDR={'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'};
 
 let S={st:{},snags:[],photos:{},nid:1,misplaced:[],headboards:{}};
-let collapsed={}; // {key: true/false} where key = C+'|'+L+'|'+sectionTitle
+let collapsed={};
+let dirtyKeys=new Set(); // track which st keys changed locally // {key: true/false} where key = C+'|'+L+'|'+sectionTitle
 let V='cl',C='',L='',PF=null,FL='all';
 let saveTimer=null,pendingPhotos=[];
 
@@ -49,12 +50,37 @@ async function readBin(){
       S.misplaced=d[0].misplaced||[];
       S.headboards=d[0].headboards||{};
     }
+    dirtyKeys.clear(); // fresh load - no local changes pending
   }catch(e){console.log('read error:',e);setSS('e');}
 }
 async function writeBin(){
   setSS('s');
   try{
-    const body={st:S.st,snags:S.snags,nid:S.nid,photos:S.photos,misplaced:S.misplaced,headboards:S.headboards};
+    // Fetch latest from server first to avoid overwriting other device's changes
+    const r=await fetch(SUPA_URL+'/cp_tracker?id=eq.main',{headers:SUPA_HDR});
+    const d=await r.json();
+    let mergedSt=S.st;
+    let mergedSnags=S.snags;
+    let mergedPhotos=S.photos;
+    let mergedMisplaced=S.misplaced;
+    let mergedHb=S.headboards;
+    let mergedNid=S.nid;
+    if(d&&d[0]){
+      // Start with server state
+      mergedSt={...d[0].st||{}};
+      // Apply only our local dirty changes on top
+      dirtyKeys.forEach(k=>{mergedSt[k]=S.st[k];});
+      // For snags/photos/misplaced/headboards use whichever has more data
+      if((d[0].snags||[]).length>S.snags.length)mergedSnags=d[0].snags;
+      if(Object.keys(d[0].photos||{}).length>Object.keys(S.photos).length)mergedPhotos=d[0].photos;
+      if((d[0].misplaced||[]).length>S.misplaced.length)mergedMisplaced=d[0].misplaced;
+      mergedNid=Math.max(S.nid,d[0].nid||1);
+      // Update local state with merged result
+      S.st=mergedSt;S.snags=mergedSnags;S.photos=mergedPhotos;
+      S.misplaced=mergedMisplaced;S.nid=mergedNid;
+    }
+    dirtyKeys.clear(); // reset after successful merge
+    const body={st:mergedSt,snags:mergedSnags,nid:mergedNid,photos:mergedPhotos,misplaced:mergedMisplaced,headboards:mergedHb};
     await fetch(SUPA_URL+'/cp_tracker?id=eq.main',{
       method:'PATCH',
       headers:SUPA_WRITE_HDR,
@@ -152,11 +178,11 @@ function exportExcel(){
 
 // ── Helpers ───────────────────────────────────────────────────────
 function gS(c,l,i){return S.st[c+'|'+l+'|'+i]||'';}
-function sS(c,l,i,v){S.st[c+'|'+l+'|'+i]=v;sched();}
+function sS(c,l,i,v){const k=c+'|'+l+'|'+i;S.st[k]=v;dirtyKeys.add(k);sched();}
 function today(){return new Date().toISOString().split('T')[0];}
-function prog(c,l){const its=lodgeItems(c,l),d=its.filter(i=>gS(c,l,i)==='Signed Off').length;return{d,t:its.length,p:its.length?Math.round(d/its.length*100):0};}
+function prog(c,l){const its=lodgeItems(c,l),d=its.filter(i=>gS(c,l,i)==='Installed').length;return{d,t:its.length,p:its.length?Math.round(d/its.length*100):0};}
 function oS(c,l){return S.snags.filter(s=>s.c===c&&s.l===l&&s.st!=='Fixed'&&s.st!=='Closed').length;}
-function scl(s){return{'Left Factory':'lft',Delivered:'del','Installed — Snagged':'sn',Installed:'ins','Signed Off':'fin'}[s]||'';}
+function scl(s){return{'Left Factory':'lft',Delivered:'del','Installed — Snagged':'sn',Installed:'fin'}[s]||'';}
 function snCl(s){return{Open:'op','In Progress':'ip','Awaiting Factory':'af'}[s]||'fx';}
 function e(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function pk(c,l,item){return c+'||'+l+'||'+item;}
@@ -363,7 +389,7 @@ function vRep(){
   const cls=Object.keys(PD).sort();
   const selCls=window._repClusters||cls;
   let ti=0,td=0;
-  selCls.forEach(cl=>{Object.keys(PD[cl]||{}).forEach(l=>{lodgeItems(cl,l).forEach(i=>{ti++;if(gS(cl,l,i)==='Signed Off')td++;});});});
+  selCls.forEach(cl=>{Object.keys(PD[cl]||{}).forEach(l=>{lodgeItems(cl,l).forEach(i=>{ti++;if(gS(cl,l,i)==='Installed')td++;});});});
   const pct=ti?Math.round(td/ti*100):0;
   const op=S.snags.filter(s=>['Open','In Progress','Awaiting Factory'].includes(s.st)&&selCls.includes(s.c));
   let h=nav('rep')+'<div class="page">';
@@ -387,7 +413,7 @@ function vRep(){
   selCls.forEach(cl=>{
     const ls=Object.keys(PD[cl]||{});
     let ct=0,cd=0,cs=0;
-    ls.forEach(l=>{lodgeItems(cl,l).forEach(i=>{ct++;if(gS(cl,l,i)==='Signed Off')cd++;});cs+=oS(cl,l);});
+    ls.forEach(l=>{lodgeItems(cl,l).forEach(i=>{ct++;if(gS(cl,l,i)==='Installed')cd++;});cs+=oS(cl,l);});
     const cp=ct?Math.round(cd/ct*100):0;
     h+='<div class="rpt-card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">'
      +'<span style="font-weight:600">'+e(cl)+'</span><span style="font-size:13px;font-weight:500;color:'+(cp===100?'#34c759':'#ff9500')+'">'+cp+'%</span></div>'
@@ -595,7 +621,7 @@ function bind(){
     cls.forEach(cl=>{
       let ti=0,td=0;
       const ls=Object.keys(PD[cl]||{});
-      ls.forEach(l=>{lodgeItems(cl,l).forEach(i=>{ti++;if(gS(cl,l,i)==='Signed Off')td++;});});
+      ls.forEach(l=>{lodgeItems(cl,l).forEach(i=>{ti++;if(gS(cl,l,i)==='Installed')td++;});});
       const os=S.snags.filter(s=>s.c===cl&&['Open','In Progress','Awaiting Factory'].includes(s.st)).length;
       sum.push([cl,ls.length,ti,td,ti?Math.round(td/ti*100)+'%':'0%',os]);
     });
