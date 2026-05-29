@@ -201,13 +201,29 @@ function vCl(){
     +'<div class="stat"><div class="stat-n" style="color:#ff9500">'+S.misplaced.length+'</div><div class="stat-l">Misplaced</div></div>'
     +'<div class="stat"><div class="stat-n" style="color:#34c759">'+((S.headboards.spares||[]).length)+'</div><div class="stat-l">Spare Boards</div></div>'
     +'</div>';
-  cls.forEach((cl,i)=>{
-    const lodgeCount=Object.keys(PD[cl]).length;
+
+  cls.forEach((cl,ci)=>{
+    const lodges=Object.keys(PD[cl]).sort((a,b)=>+a-+b);
     const openSnags=S.snags.filter(s=>s.c===cl&&(s.st==='Open'||s.st==="In Progress")).length;
-    h+='<button class="row-btn" id="cl-'+i+'">'
-      +'<div class="row-head"><span class="row-title">'+e(cl)+'</span>'
-      +'<span class="row-meta">'+(openSnags>0?'<span class="row-snag">'+openSnags+'</span>':'')+lodgeCount+' lodges &rsaquo;</span></div>'
-      +'</button>';
+    h+='<div style="margin-bottom:14px">'
+     +'<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#8e8e93;padding:0 2px;margin-bottom:6px">'
+     +e(cl)+(openSnags>0?' <span style="color:#ff3b30">('+openSnags+' snags)</span>':'')
+     +'</div>'
+     +'<div style="display:flex;flex-wrap:wrap;gap:8px">';
+    lodges.forEach((l,li)=>{
+      const p=prog(cl,l);
+      const os=oS(cl,l);
+      const pct=p.p;
+      const bg=pct===100?'#eafaea':os>0?'#ffeaea':'#fff';
+      const border=pct===100?'#34c759':os>0?'#ff3b30':'#e5e5ea';
+      const txt=pct===100?'#1a7030':os>0?'#c80000':'#1c1c1e';
+      h+='<button id="lo-'+ci+'-'+li+'" style="background:'+bg+';border:2px solid '+border+';border-radius:10px;padding:8px 10px;min-width:60px;text-align:center;cursor:pointer">'
+       +'<div style="font-size:16px;font-weight:700;color:'+txt+'">'+l+'</div>'
+       +'<div style="font-size:10px;color:'+(pct===100?'#34c759':'#8e8e93')+';margin-top:2px">'+pct+'%</div>'
+       +(os>0?'<div style="font-size:9px;color:#ff3b30">'+os+'⚠</div>':'')
+       +'</button>';
+    });
+    h+='</div></div>';
   });
   return h+'</div>';
 }
@@ -505,7 +521,12 @@ function bind(){
   };
 
   // Cluster list buttons
-  Object.keys(PD).sort().forEach((cl,i)=>{const b=$('cl-'+i);if(b)b.onclick=()=>{C=cl;V='lo';render();};});
+  Object.keys(PD).sort().forEach((cl,ci)=>{
+    Object.keys(PD[cl]).sort((a,b)=>+a-+b).forEach((l,li)=>{
+      const b=$('lo-'+ci+'-'+li);
+      if(b)b.onclick=()=>{C=cl;L=l;V='it';render();};
+    });
+  });
 
   // Lodge list buttons
   if(V==='lo')Object.keys(PD[C]).sort((a,b)=>+a-+b).forEach((l,i)=>{const b=$('lo-'+i);if(b)b.onclick=()=>{L=l;V='it';render();};});
