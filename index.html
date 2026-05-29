@@ -32,6 +32,7 @@ const SUPA_HDR={'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Ty
 const SUPA_WRITE_HDR={'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'};
 
 let S={st:{},snags:[],photos:{},nid:1,misplaced:[],headboards:{}};
+let collapsed={}; // {key: true/false} where key = C+'|'+L+'|'+sectionTitle
 let V='cl',C='',L='',PF=null,FL='all';
 let saveTimer=null,pendingPhotos=[];
 
@@ -265,11 +266,16 @@ function vIt(){
     if(!itemList.length)return'';
     const done=itemList.filter(item=>gS(C,L,item)==='Signed Off').length;
     const pct=itemList.length?Math.round(done/itemList.length*100):0;
+    const ck=C+'|'+L+'|'+title;
+    const isCollapsed=collapsed[ck]||false;
     let sh='<div style="background:'+bg+';border-radius:10px;padding:10px 12px;margin-bottom:10px">';
-    sh+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">';
+    sh+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:'+(isCollapsed?'0':'5px')+';cursor:pointer" data-sck="'+e(ck)+'">';
     sh+='<span style="font-size:13px;font-weight:600">'+icon+' '+title+'</span>';
+    sh+='<div style="display:flex;align-items:center;gap:8px">';
     sh+='<span style="font-size:11px;font-weight:600;color:'+(pct===100?'#34c759':'#636366')+'">'+done+'/'+itemList.length+'</span>';
-    sh+='</div>';
+    sh+='<span style="font-size:14px;color:#8e8e93;line-height:1">'+(isCollapsed?'▶':'▼')+'</span>';
+    sh+='</div></div>';
+    if(!isCollapsed){
     sh+='<div class="pb" style="margin-bottom:8px"><div class="pf '+(pct===100?'g':pct>0?'b':'')+'" style="width:'+pct+'%"></div></div>';
     itemList.forEach(item=>{
       const gi=its.indexOf(item);
@@ -285,6 +291,8 @@ function vIt(){
         +'<label class="photo-lbl">&#128247; photo<input type="file" accept="image/*" capture="environment" id="ipu-'+gi+'" style="display:none"></label>'
         +'</div></div>';
     });
+    sh+='</div>';
+    } // end if !isCollapsed
     sh+='</div>';
     return sh;
   }
@@ -519,6 +527,15 @@ function bind(){
       iph.forEach((_,pi)=>{const img=$('ip-'+gi+'-'+pi);if(img)img.onclick=()=>openLB(img.src);});
     });
   }
+
+  // Section collapse toggles
+  document.querySelectorAll('[data-sck]').forEach(hdr=>{
+    hdr.onclick=()=>{
+      const ck=hdr.dataset.sck;
+      collapsed[ck]=!collapsed[ck];
+      render();
+    };
+  });
 
   // Snag log filter chips
   ['all','Open','In Progress','Awaiting Factory','Fixed','Closed'].forEach(f=>{
