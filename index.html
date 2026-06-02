@@ -665,7 +665,7 @@ function bind(){
     const err=$('fa-err');
     if(!c||!l||!n){err.style.display='block';err.textContent='Please fill in Cluster, Lodge and Description.';return;}
     // Warn if an open snag already exists for this item on this lodge
-    if(i){
+    if(i&&!editId){
       const existing=S.snags.filter(sn=>sn.c===c&&sn.l===l&&sn.i===i&&!['Fixed','Closed'].includes(sn.st));
       if(existing.length&&!lb.dataset.confirmed){
         err.style.display='block';
