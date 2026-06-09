@@ -206,7 +206,7 @@ function render(){
 function sb(){return '<div class="sync-bar"><span><span class="dot"></span><span class="sync-txt">Synced – all devices</span></span><button id="rfbtn" style="background:none;border:none;color:#007aff;font-size:12px;cursor:pointer">Refresh</button></div>';}
 function nav(on){
   return '<div class="nav">'
-    +'<button id="n-cl" class="'+(on==='cl'?'on':'')+'">Status</button>'
+    +'<button id="n-cl" class="'+(on==='cl'?'on':'')+'">START</button>'
     +'<button id="n-log" class="'+(on==='log'?'on':'')+'">Snag Log</button>'
     +'<button id="n-mis" class="'+(on==='mis'?'on':'')+'">Misplaced</button>'
     +'<button id="n-hb" class="'+(on==='hb'?'on':'')+'">Headboards</button>'
@@ -312,7 +312,7 @@ function vIt(){
     const done=itemList.filter(item=>gS(C,L,item)==='Installed').length;
     const pct=itemList.length?Math.round(done/itemList.length*100):0;
     const ck=C+'|'+L+'|'+title;
-    const isCollapsed=collapsed[ck]||false;
+    const isCollapsed=collapsed[ck]===undefined?true:collapsed[ck];
     const delKey='DELIVERY|'+C+'|'+L+'|'+title;
     const delivered=S.st[delKey]==='Delivered';
     let sh='<div style="background:'+bg+';border-radius:10px;padding:10px 12px;margin-bottom:10px">';
@@ -320,7 +320,7 @@ function vIt(){
     sh+='<span style="font-size:13px;font-weight:600">'+icon+' '+title+'</span>';
     sh+='<div style="display:flex;align-items:center;gap:8px">';
     sh+='<span style="font-size:11px;font-weight:600;color:'+(pct===100?'#34c759':'#636366')+'">'+done+'/'+itemList.length+'</span>';
-    sh+='<span style="font-size:14px;color:#8e8e93;line-height:1">'+(isCollapsed?'▶':'▼')+'</span>';
+    sh+='<span style="font-size:13px;font-weight:600;color:#fff;background:'+(isCollapsed?'#007aff':'#8e8e93')+';border-radius:6px;padding:3px 10px;line-height:1">'+(isCollapsed?'▼ OPEN':'▲ HIDE')+'</span>';
     sh+='</div></div>';
     // Delivery toggle - always visible (room-level quick status)
     sh+='<button class="del-toggle" data-delkey="'+e(delKey)+'" style="width:100%;padding:7px;border-radius:8px;border:1.5px solid '+(delivered?'#34c759':'#ff9500')+';background:'+(delivered?'#eafaea':'#fff8ec')+';color:'+(delivered?'#1a7030':'#b8700a')+';font-size:12px;font-weight:600;cursor:pointer;margin-bottom:'+(isCollapsed?'0':'8px')+'">'+(delivered?'✓ Delivered':'○ Tap when Delivered')+'</button>';
