@@ -38,7 +38,7 @@ const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const SUPA_HDR={'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'};
 const SUPA_WRITE_HDR={'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'};
 
-let S={st:{},snags:[],photos:{},nid:1,misplaced:[],headboards:{}};
+let S={st:{},snags:[],photos:{},nid:1,misplaced:[],headboards:{},deleted:[]};
 let collapsed={};
 let pendingSave=false; // {key: true/false} where key = C+'|'+L+'|'+sectionTitle
 let V='cl',C='',L='',PF=null,FL='all',LFL=null,editId=null;
@@ -53,14 +53,16 @@ async function readBin(){
       // Status: replace (last write wins is fine for toggles)
       S.st=d[0].st||{};
       // Snags/misplaced/headboards: MERGE by ID so neither device loses entries
+      const allDeleted=new Set([...(S.deleted||[]),...(d[0].deleted||[])]);
       const mergeById=(local,server)=>{
         const merged={};
         (server||[]).forEach(x=>{merged[x.id]=x;});
         (local||[]).forEach(x=>{merged[x.id]=x;}); // local wins on conflict
-        return Object.values(merged).sort((a,b)=>a.id-b.id);
+        return Object.values(merged).filter(x=>!allDeleted.has(x.id)).sort((a,b)=>a.id-b.id);
       };
       S.snags=mergeById(S.snags,d[0].snags);
       S.misplaced=mergeById(S.misplaced,d[0].misplaced);
+      S.deleted=[...allDeleted];
       // headboards has spares/missing arrays
       const serverHb=d[0].headboards||{};
       S.headboards={
@@ -78,7 +80,7 @@ async function writeBin(){
   try{
     await fetch(SUPA_URL+'/cp_tracker?id=eq.main',{
       method:'PATCH',headers:SUPA_WRITE_HDR,
-      body:JSON.stringify({st:S.st,snags:S.snags,nid:S.nid,photos:S.photos,misplaced:S.misplaced,headboards:S.headboards})
+      body:JSON.stringify({st:S.st,snags:S.snags,nid:S.nid,photos:S.photos,misplaced:S.misplaced,headboards:S.headboards,deleted:S.deleted||[]})
     });
     pendingSave=false;
     setSS('ok');
@@ -656,7 +658,7 @@ function bind(){
   // Snag actions
   S.snags.forEach(s=>{
     const sel=$('ss-'+s.id);if(sel)sel.onchange=function(){s.st=this.value;sched();render();};
-    const db=$('sd-'+s.id);if(db)db.onclick=()=>{if(!confirm('Delete this snag?'))return;S.snags=S.snags.filter(x=>x.id!==s.id);sched();render();};
+    const db=$('sd-'+s.id);if(db)db.onclick=()=>{if(!confirm('Delete this snag?'))return;S.snags=S.snags.filter(x=>x.id!==s.id);if(!S.deleted)S.deleted=[];S.deleted.push(s.id);sched();render();};
     const eb=$('se-'+s.id);if(eb)eb.onclick=()=>{editId=s.id;C=s.c;L=s.l;PF={c:s.c,l:s.l,i:s.i||''};pendingPhotos=[...(s.photos||[])];V='add';render();};
     const photos=s.photos||[];
     photos.forEach((_,pi)=>{const img=$('sp-'+s.id+'-'+pi);if(img)img.onclick=()=>openLB(img.src);});
