@@ -34,7 +34,7 @@ const PD={};
 Object.keys(_PD).forEach(cl=>{PD[cl]={};Object.keys(_PD[cl]).forEach(l=>{PD[cl][l]={n:_PD[cl][l].n,i:_PD[cl][l].i.map(x=>IL[x])};});});
 
 const SS=['Left Factory','Delivered','Installed — Snagged','Installed'];
-const NS=['Open','In Progress','Awaiting Factory','Fixed','Closed'];
+const NS=['Open','Factory Ordered','Delivered','Closed'];
 const SUPA_URL='https://klyropbsupqfmtjjwlfa.supabase.co/rest/v1';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtseXJvcGJzdXBxZm10amp3bGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNjY4MDEsImV4cCI6MjA5NDg0MjgwMX0.VuP5mnSgNhzoIdx7t3R7mgt2tyLZVtElUihei3xgC5Q';
 const SUPA_HDR={'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'};
@@ -74,6 +74,8 @@ async function readBin(){
       // nid: take max to avoid ID collisions
       S.nid=Math.max(S.nid||1,d[0].nid||1);
       S.photos={...d[0].photos||{},...S.photos};
+      // Translate legacy statuses to the current 4-step flow
+      S.snags.forEach(s=>{s.st=normSt(s.st);});
     }
   }catch(e){console.log('read error:',e);setSS('e');}
 }
@@ -119,14 +121,13 @@ document.getElementById('lightbox').onclick=function(e){if(e.target===this)this.
 
 // ── Closed-snag helpers ───────────────────────────────────────────
 function isDone(s){return s.st==='Fixed'||s.st==='Closed';}
+function normSt(v){return v==='In Progress'||v==='Awaiting Factory'?'Factory Ordered':v==='Fixed'?'Closed':v;}
 function stampClosed(s){
   if(isDone(s)){if(!s.closedDate)s.closedDate=today();}
   else{delete s.closedDate;}
 }
 function maybeClearPhotos(s){
-  if(s.st==='Closed'&&(s.photos||[]).length){
-    if(confirm('Snag closed. Delete its '+s.photos.length+' photo(s) to free up space?\n\nOK = delete photos (cannot be undone)\nCancel = keep photos')){s.photos=[];}
-  }
+  if(s.st==='Closed'&&(s.photos||[]).length){s.photos=[];toast('Photos removed — snag closed');}
 }
 
 // ── Photo Archive (Closed snags only, nothing deleted) ───────────
@@ -221,7 +222,7 @@ function today(){return new Date().toISOString().split('T')[0];}
 function prog(c,l){const its=lodgeItems(c,l),d=its.filter(i=>gS(c,l,i)==='Installed').length;return{d,t:its.length,p:its.length?Math.round(d/its.length*100):0};}
 function oS(c,l){return S.snags.filter(s=>s.c===c&&s.l===l&&s.st!=='Fixed'&&s.st!=='Closed').length;}
 function scl(s){return{'Left Factory':'lft',Delivered:'del','Installed — Snagged':'sn',Installed:'fin'}[s]||'';}
-function snCl(s){return{Open:'op','In Progress':'ip','Awaiting Factory':'af'}[s]||'fx';}
+function snCl(s){return{Open:'op','Factory Ordered':'af',Delivered:'ip','In Progress':'ip','Awaiting Factory':'af'}[s]||'fx';}
 function e(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function pk(c,l,item){return c+'||'+l+'||'+item;}
 
@@ -263,14 +264,14 @@ function vCl(){
   const tl=Object.values(PD).reduce((a,cl)=>a+Object.keys(cl).length,0);
   let h=nav('cl')+'<div class="page"><div class="stats">'
     +'<div class="stat"><div class="stat-n" style="color:#007aff">'+tl+'</div><div class="stat-l">Lodges</div></div>'
-    +'<div class="stat"><div class="stat-n" style="color:#ff3b30">'+S.snags.filter(s=>s.st==='Open'||s.st==="In Progress").length+'</div><div class="stat-l">Open Snags</div></div>'
+    +'<div class="stat"><div class="stat-n" style="color:#ff3b30">'+S.snags.filter(s=>!isDone(s)).length+'</div><div class="stat-l">Open Snags</div></div>'
     +'<div class="stat"><div class="stat-n" style="color:#ff9500">'+S.misplaced.length+'</div><div class="stat-l">Misplaced</div></div>'
     +'<div class="stat"><div class="stat-n" style="color:#34c759">'+((S.headboards.spares||[]).length)+'</div><div class="stat-l">Spare Boards</div></div>'
     +'</div>';
 
   cls.forEach((cl,ci)=>{
     const lodges=Object.keys(PD[cl]).sort((a,b)=>+a-+b);
-    const openSnags=S.snags.filter(s=>s.c===cl&&(s.st==='Open'||s.st==="In Progress")).length;
+    const openSnags=S.snags.filter(s=>s.c===cl&&!isDone(s)).length;
     h+='<div class="row-btn" style="display:block;margin-bottom:8px">'
      +'<div class="row-head" style="margin-bottom:6px">'
      +'<span class="row-title">'+e(cl)+'</span>'
@@ -325,23 +326,26 @@ function vIt(){
   const grp=groupItems(its);
   const bedNums=Object.keys(grp.beds).map(Number).sort();
   let h='<div class="hdr"><button class="back-btn" id="back-lo">&#8249; '+e(C.replace('Cluster ','Cl.'))+'</button><span class="hdr-t">Lodge '+L+'</span><button class="add-btn" id="add-lo">+ Snag</button></div>'+sb()+'<div class="page">';
-  // Open snags on this lodge - tappable to update status
+  // Snags on this lodge - open ones tappable, closed ones stay visible struck through
   const lodgeSnags=S.snags.filter(s=>s.c===C&&s.l===L);
-  const openLodgeSnags=lodgeSnags.filter(s=>['Open','In Progress','Awaiting Factory'].includes(s.st));
-  if(openLodgeSnags.length){
-    h+='<div style="background:#fff5f5;border:1px solid #ffd0d0;border-radius:10px;padding:10px 12px;margin-bottom:12px">';
-    h+='<div id="open-snags-link" style="font-size:12px;font-weight:600;color:#c80000;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center"><span>⚠ '+openLodgeSnags.length+' Open Snag'+(openLodgeSnags.length>1?'s':'')+' — tap to update</span><span style="font-size:11px;color:#007aff;font-weight:500">View in Snag Log ›</span></div>';
-    openLodgeSnags.forEach(s=>{
-      h+='<div style="background:#fff;border-radius:8px;padding:8px 10px;margin-bottom:6px;border:1px solid #f0d0d0">'
+  const openLodgeSnags=lodgeSnags.filter(s=>!isDone(s));
+  const doneLodgeSnags=lodgeSnags.filter(s=>isDone(s));
+  if(lodgeSnags.length){
+    const hasOpen=openLodgeSnags.length>0;
+    h+='<div style="background:'+(hasOpen?'#fff5f5':'#f4fbf4')+';border:1px solid '+(hasOpen?'#ffd0d0':'#cde8cd')+';border-radius:10px;padding:10px 12px;margin-bottom:12px">';
+    h+='<div id="open-snags-link" style="font-size:12px;font-weight:600;color:'+(hasOpen?'#c80000':'#1a7030')+';margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center"><span>'+(hasOpen?'⚠ '+openLodgeSnags.length+' Open Snag'+(openLodgeSnags.length>1?'s':'')+' — tap to update':'✓ All snags closed')+'</span><span style="font-size:11px;color:#007aff;font-weight:500">View in Snag Log ›</span></div>';
+    [...openLodgeSnags,...doneLodgeSnags].forEach(s=>{
+      const done=isDone(s);
+      h+='<div style="background:#fff;border-radius:8px;padding:8px 10px;margin-bottom:6px;border:1px solid '+(done?'#cde8cd':'#f0d0d0')+'">'
        +'<div style="display:flex;justify-content:space-between;align-items:flex-start">'
        +'<div style="flex:1">'
        +(s.i?'<div style="font-size:11px;color:#8e8e93;font-weight:600">'+e(s.i)+'</div>':'')
-       +'<div style="font-size:13px;line-height:1.4;margin:2px 0 6px">'+e(s.note)+'</div>'
+       +'<div style="font-size:13px;line-height:1.4;margin:2px 0 6px'+(done?';text-decoration:line-through;color:#8e8e93':'')+'">'+e(s.note)+(done&&s.closedDate?'<span class="closed-badge">✓ '+e(s.closedDate)+'</span>':'')+'</div>'
        +'</div>'
        +'<button class="snag-edit-btn" data-snagid="'+s.id+'" style="background:none;border:none;color:#007aff;font-size:18px;cursor:pointer;padding:0 0 0 8px">&#9998;</button>'
        +'</div>'
        +'<div style="display:flex;gap:5px;flex-wrap:wrap">'
-       +['Open','In Progress','Awaiting Factory','Fixed','Closed'].map(st=>
+       +['Open','Factory Ordered','Delivered','Closed'].map(st=>
          '<button class="snagstat-btn" data-snagid="'+s.id+'" data-snagst="'+st+'" style="padding:4px 8px;border-radius:12px;border:1px solid '+(s.st===st?'#007aff':'#d1d1d6')+';background:'+(s.st===st?'#007aff':'#f9f9f9')+';color:'+(s.st===st?'#fff':'#636366')+';font-size:11px;cursor:pointer">'+st+'</button>'
        ).join('')
        +'</div></div>';
@@ -413,7 +417,7 @@ function vAdd(){
     +'<div class="ff"><label>Description</label><textarea id="fa-n" placeholder="Describe the issue…">'+(editId?e((S.snags.find(x=>x.id===editId)||{}).note||''):'')+'</textarea></div>'
     +'<div class="ff"><label>Date</label><input type="date" id="fa-d" value="'+today()+'"></div>'
     +'<div class="ff"><label>Status</label><select id="fa-s">';
-  const editSt=editId?((S.snags.find(x=>x.id===editId)||{}).st||'Open'):'Open';
+  const editSt=editId?normSt((S.snags.find(x=>x.id===editId)||{}).st||'Open'):'Open';
   NS.forEach(s=>{h+='<option'+(s===editSt?' selected':'')+'>'+s+'</option>';});
   h+='</select></div>'
     +'<div class="ff"><label>Photos</label>'
@@ -432,7 +436,7 @@ function vLog(){
   let h=nav('log');
   if(LFL)h+='<div style="background:#e7f0ff;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;font-size:13px"><span style="font-weight:600;color:#007aff">Lodge '+LFL.l+' only</span><button id="clear-lfl" style="background:#007aff;color:#fff;border:none;border-radius:12px;padding:3px 12px;font-size:12px;cursor:pointer">Show all lodges</button></div>';
   h+='<div class="chips">';
-  ['all','Open','In Progress','Awaiting Factory','Fixed','Closed'].forEach(f=>{
+  ['all','Open','Factory Ordered','Delivered','Closed'].forEach(f=>{
     h+='<button id="f-'+f.replace(/\s+/g,'_')+'" class="'+(FL===f?'on':'')+'">'+( f==='all'?'All':f)+'</button>';
   });
   h+='</div>';
@@ -468,7 +472,7 @@ function vRep(){
   let ti=0,td=0;
   selCls.forEach(cl=>{Object.keys(PD[cl]||{}).forEach(l=>{lodgeItems(cl,l).forEach(i=>{ti++;if(gS(cl,l,i)==='Installed')td++;});});});
   const pct=ti?Math.round(td/ti*100):0;
-  const op=S.snags.filter(s=>['Open','In Progress','Awaiting Factory'].includes(s.st)&&selCls.includes(s.c));
+  const op=S.snags.filter(s=>!isDone(s)&&selCls.includes(s.c));
   let h=nav('rep')+'<div class="page">';
   h+='<div style="background:#fff;border-radius:12px;padding:12px 14px;margin-bottom:12px">'
    +'<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#8e8e93;margin-bottom:8px">Select clusters for report</div>'
@@ -658,7 +662,7 @@ function bind(){
     });
     // Tap warning bar to open snag log filtered to this lodge
     if($('open-snags-link'))$('open-snags-link').onclick=()=>{LFL={c:C,l:L};V='log';render();};
-    // Open snag status buttons
+    // Snag status buttons
     document.querySelectorAll('.snagstat-btn').forEach(btn=>{
       btn.onclick=()=>{
         const sid=+btn.dataset.snagid, newSt=btn.dataset.snagst;
@@ -710,7 +714,7 @@ function bind(){
   });
 
   // Snag log filter chips
-  ['all','Open','In Progress','Awaiting Factory','Fixed','Closed'].forEach(f=>{
+  ['all','Open','Factory Ordered','Delivered','Closed'].forEach(f=>{
     const b=$('f-'+f.replace(/\s+/g,'_'));if(b)b.onclick=()=>{FL=f;render();};
   });
   if($('clear-lfl'))$('clear-lfl').onclick=()=>{LFL=null;render();};
@@ -754,7 +758,7 @@ function bind(){
     err.style.display='none';
     if(editId){
       const sn=S.snags.find(x=>x.id===editId);
-      if(sn){sn.c=c;sn.l=l;sn.i=i;sn.note=n;sn.d=d;sn.st=st;sn.photos=[...pendingPhotos];stampClosed(sn);}
+      if(sn){sn.c=c;sn.l=l;sn.i=i;sn.note=n;sn.d=d;sn.st=st;sn.photos=[...pendingPhotos];stampClosed(sn);maybeClearPhotos(sn);}
       editId=null;pendingPhotos=[];
       clearTimeout(saveTimer);
       lb.textContent='Saving…';lb.disabled=true;
@@ -766,7 +770,7 @@ function bind(){
       return;
     }
     const nsn={id:S.nid++,c,l,i,note:n,d,st,photos:[...pendingPhotos]};
-    stampClosed(nsn);
+    stampClosed(nsn);maybeClearPhotos(nsn);
     S.snags.push(nsn);
     if(i){const cs=gS(c,l,i);if(!cs||cs==='Installed')sS(c,l,i,'Installed — Snagged');}
     pendingPhotos=[];$('fa-n').value='';PF={c,l,i:''};
@@ -819,7 +823,7 @@ function bind(){
   };
   if($('arch-btn'))$('arch-btn').onclick=()=>archivePhotos();
   if($('copy-btn'))$('copy-btn').onclick=()=>{
-    const op=S.snags.filter(s=>['Open','In Progress','Awaiting Factory'].includes(s.st));
+    const op=S.snags.filter(s=>!isDone(s));
     if(!op.length){toast('No open snags');return;}
     const txt='CP Tracker Report - '+today()+'\n\n'+op.map(s=>'Lodge '+s.l+' ('+s.c+')'+(s.i?' | '+s.i:'')+'\n'+s.note+'\n'+s.d+' | '+s.st).join('\n\n');
     if(navigator.clipboard)navigator.clipboard.writeText(txt).then(()=>toast('Copied ✓'));
